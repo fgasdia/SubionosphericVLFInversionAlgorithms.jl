@@ -9,9 +9,9 @@ function test_rosenbrock()
     # result = optimize(rosenbrock, x0, BFGS())
 
     T(k) = 50*exp(-k^(1/2))
-    xbest, Ebest = vfsa(rosenbrock, x0, [-100, -100], [100, 100], T, T, 100, 1)
+    xbest, Ebest = vfsa(rosenbrock, x0, [-50, -50], [50, 50], T, T, 1000, 5)
 
-    @test xbest ≈ [1, 1]
+    @test xbest ≈ [1, 1] atol=1e-2
     @test_throws ArgumentError vfsa(rosenbrock, x0, -100, 100, T, T, 100, 1)
     @test_throws ArgumentError vfsa(rosenbrock, x0, [100, 100], [-100, -100], T, T, 100, 1)
 end
