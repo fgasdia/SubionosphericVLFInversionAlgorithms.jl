@@ -2,6 +2,8 @@ module SubionosphericVLFInversionAlgorithms
 
 using Random
 
+export vfsa
+
 const RNG = MersenneTwister(1234)
 
 
@@ -16,37 +18,51 @@ end
 
 
 """
-    f: objective function (to minimize)
-    x: initial parameter values
-    T: transition distribution (we will call rand(T))
-    t: annealing schedule
-    kmax: number of iterations
-    N: number of moves at const temp
+    vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT)
+
+Apply very fast simulated annealing (VFSA) to the function `f`, returning a tuple of the
+best `x` and corresponding energy `f(x)`. 
+
+# Arguments
+
+- `f`: objective function of (to minimize) of `x`. Must return a scalar value.
+- `x`: initial parameter (model) values.
+- `xmin`: lower bound of each model parameter.
+- `xmax`: upper bound of each model parameter.
+- `Ta`: temperature function of iteration `k` for acceptance criterion.
+- `Tm`: temperature function of iteration `k`, indexable for each model parameter.
+- `NK`: number of iterations.
+- `NT`: number of moves at each temperature.
 
 # References
 
 Algorithms for Optimization, Algorithm 8.4
 Global Optimization Methods in Geophysical Inversion, Fig 4.11
 """
-function vfsa(f, x, T, kmax, N)
+function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT)
+    length(x) == length(xmin) == length(xmax) ||
+        throw(ArgumentError("`x`, `xmin`, and `xmax` must have same length"))
+    all(xmin .< xmax) || throw(ArgumentError("`xmin` must be less than `xmax`"))
+
     NM = length(x)
     x′ = similar(x)
 
-    xbest .= x
-    Ebest = E
-
     E = f(x)
 
-    for k in 1:kmax
-        Tk = T(k)
-        Tmk = Tm(k)
+    xbest = copy(x)
+    Ebest = E
 
-        for n in 1:N
-            u = rand(RNG, nparams)
+    for k in 1:NK
+        Ta_k = Ta(k)
+        Tm_k(i) = (t = Tm(k); t isa Number ? t : t[i])
+
+        for n in 1:NT
             for i in 1:NM
-                xnew = typemax(x[i])  # keep trying until new estimate is in bounds
-                while !(xmin[i] <= xnew <= xmax[i]) 
-                    y = sign(u[i] - 1/2)*Tmk[i]*((1 + 1/Tmk[i])^abs(2*u[i] - 1) - 1)
+                xnew = typemax(x[i])
+                while !(xmin[i] <= xnew <= xmax[i])
+                    # keep trying until new estimate is in bounds (usually called only once)
+                    u = rand(RNG)
+                    y = sign(u - 1/2)*Tm_k(i)*((1 + 1/Tm_k(i))^abs(2*u - 1) - 1)
                     xnew = x[i] + y*(xmax[i] - xmin[i])
                 end
                 x′[i] = xnew
@@ -55,13 +71,14 @@ function vfsa(f, x, T, kmax, N)
             E′ = f(x′)
             ΔE = E′ - E
 
-            if ΔE <= 0 || rand(RNG) < exp(-ΔE/Tk)
+            if ΔE <= 0 || rand(RNG) < exp(-ΔE/Ta_k)
                 x .= x′
                 E = E′
             end
 
             if E′ < Ebest
-                xbest, Ebest = x′, E′
+                xbest .= x′
+                Ebest = E′
             end
         end
     end
