@@ -9,40 +9,37 @@ const RNG = MersenneTwister(1234)
 
 
 """
-NM model parameters
-
-Can return a vector (this is indexed) if different c and T0
-"""
-function T(k)
-    return T0*exp(-c*k^(1/NM))
-end
-
-
-"""
     vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false)
 
 Apply very fast simulated annealing (VFSA) to the function `f`, returning a tuple of the
-best `x` and corresponding energy `f(x)`. 
+best `x` and corresponding energy `E = f(x)`. 
 
 # Arguments
 
-- `f`: objective function of (to minimize) of `x`. Must return a scalar value.
+- `f`: objective function (to minimize) of `x`. Must return a scalar value.
 - `x`: initial parameter (model) values.
 - `xmin`: lower bound of each model parameter.
 - `xmax`: upper bound of each model parameter.
 - `Ta`: temperature function of iteration `k` for acceptance criterion.
 - `Tm`: temperature function of iteration `k`, indexable for each model parameter.
-- `NK`: number of iterations.
+- `NK`: number of iterations (changes in temperature).
 - `NT`: number of moves at each temperature.
 
-If `saveprogress=:false`, only return (`x`, `E`);
-if `:all`, return (`x`, `E`, `xprogress`, `Eprogress`) where the "progress" variables save
-every intermediate value of `x` and `E`. 
+If `saveprogress` is `:false` return `(x, E)`. If `:all`, return
+`(x, E, xprogress, Eprogress)` where the "progress" variables save every intermediate
+value of `x` and `E`.
+
+The temperature function should be of the form `T(k) = T0*exp(-c*k^(1/NM))` where `NM` is
+the number of model parameters `length(x)`. `Tm` can return multuple values for each of `x`. 
 
 # References
 
-Algorithms for Optimization, Algorithm 8.4
-Global Optimization Methods in Geophysical Inversion, Fig 4.11
+[1]: Kochenderfer, Mykel J., and Tim A. Wheeler. Algorithms for Optimization. The MIT Press,
+    2019, https://algorithmsbook.com/optimization/#.
+
+[2]: Sen, Mrinal K., and Paul L. Stoffa. “Ch. 4: Simulated Annealing Methods.” Global
+    Optimization Methods in Geophysical Inversion, 2nd ed., Cambridge University Press,
+    2013, doi:10.1017/CBO9780511997570.
 """
 function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false)
     length(x) == length(xmin) == length(xmax) ||
