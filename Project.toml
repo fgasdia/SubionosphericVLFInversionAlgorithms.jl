@@ -4,4 +4,5 @@ authors = ["Forrest Gasdia <17058025+fgasdia@users.noreply.github.com>"]
 version = "0.0.1"
 
 [deps]
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"

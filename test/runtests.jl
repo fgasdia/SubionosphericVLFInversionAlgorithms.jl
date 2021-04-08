@@ -30,7 +30,7 @@ function test_parabola()
     T(k) = 10*exp(-k)
 
     x0 = [0.8]
-    xbest, Ebest = vfsa(parabola, x0, -1, 1, T, T, 200, 10)
+    xbest, Ebest = vfsa(parabola, x0, -1, 1, T, T, 100, 1)
 
     @test only(xbest) ≈ 0 atol=1e-6
 end

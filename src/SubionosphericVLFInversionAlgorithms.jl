@@ -1,6 +1,7 @@
 module SubionosphericVLFInversionAlgorithms
 
 using Random
+using ProgressMeter
 
 export vfsa
 
@@ -18,7 +19,7 @@ end
 
 
 """
-    vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT)
+    vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false)
 
 Apply very fast simulated annealing (VFSA) to the function `f`, returning a tuple of the
 best `x` and corresponding energy `f(x)`. 
@@ -34,26 +35,35 @@ best `x` and corresponding energy `f(x)`.
 - `NK`: number of iterations.
 - `NT`: number of moves at each temperature.
 
+If `saveprogress=:false`, only return (`x`, `E`);
+if `:all`, return (`x`, `E`, `xprogress`, `Eprogress`) where the "progress" variables save
+every intermediate value of `x` and `E`. 
+
 # References
 
 Algorithms for Optimization, Algorithm 8.4
 Global Optimization Methods in Geophysical Inversion, Fig 4.11
 """
-function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT)
+function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false)
     length(x) == length(xmin) == length(xmax) ||
         throw(ArgumentError("`x`, `xmin`, and `xmax` must have same length"))
     all(xmin .< xmax) || throw(ArgumentError("`xmin` must be less than `xmax`"))
 
-    x = copy(x)
     NM = length(x)
     x′ = similar(x)
 
     E = f(x)
 
-    xbest = copy(x)
-    Ebest = E
-
-    for k in 1:NK
+    if saveprogress == :false
+        xprogress = nothing
+        Eprogress = nothing
+    elseif saveprogress == :all
+        xprogress = Vector{typeof(x)}(undef, NK*NT)
+        Eprogress = Vector{typeof(E)}(undef, NK*NT)
+        iter = 1
+    end
+    
+    @showprogress for k in 1:NK
         Ta_k = Ta(k)
         Tm_k(i) = (t = Tm(k); t isa Number ? t : t[i])
 
@@ -77,14 +87,15 @@ function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT)
                 E = E′
             end
 
-            if E′ < Ebest
-                xbest .= x′
-                Ebest = E′
-            end
+            if saveprogress == :all
+                xprogress[iter] = copy(x)
+                Eprogress[iter] = E
+                iter += 1
+            end 
         end
     end
 
-    return xbest, Ebest
+    return x, E, xprogress, Eprogress
 end
 
 end # module
