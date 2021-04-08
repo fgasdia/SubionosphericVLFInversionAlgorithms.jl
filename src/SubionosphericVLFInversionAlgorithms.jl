@@ -44,6 +44,7 @@ function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT)
         throw(ArgumentError("`x`, `xmin`, and `xmax` must have same length"))
     all(xmin .< xmax) || throw(ArgumentError("`xmin` must be less than `xmax`"))
 
+    x = copy(x)
     NM = length(x)
     x′ = similar(x)
 
