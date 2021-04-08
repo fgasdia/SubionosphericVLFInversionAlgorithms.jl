@@ -49,6 +49,7 @@ function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false)
         throw(ArgumentError("`x`, `xmin`, and `xmax` must have same length"))
     all(xmin .< xmax) || throw(ArgumentError("`xmin` must be less than `xmax`"))
 
+    x = copy(x)  # so `x` isn't modified in place
     NM = length(x)
     x′ = similar(x)
 
@@ -58,7 +59,7 @@ function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false)
         xprogress = nothing
         Eprogress = nothing
     elseif saveprogress == :all
-        xprogress = Vector{typeof(x)}(undef, NK*NT)
+        xprogress = [similar(x) for i = 1:NK*NT]
         Eprogress = Vector{typeof(E)}(undef, NK*NT)
         iter = 1
     end
@@ -88,7 +89,7 @@ function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false)
             end
 
             if saveprogress == :all
-                xprogress[iter] = copy(x)
+                xprogress[iter] .= x
                 Eprogress[iter] = E
                 iter += 1
             end 
