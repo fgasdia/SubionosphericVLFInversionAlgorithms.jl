@@ -1,7 +1,7 @@
 name = "SubionosphericVLFInversionAlgorithms"
 uuid = "0803ec96-7665-482a-9427-2785addca038"
 authors = ["Forrest Gasdia <17058025+fgasdia@users.noreply.github.com>"]
-version = "0.0.1"
+version = "0.0.2"
 
 [deps]
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"

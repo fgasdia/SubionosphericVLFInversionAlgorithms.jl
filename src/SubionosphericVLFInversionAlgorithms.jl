@@ -9,7 +9,7 @@ const RNG = MersenneTwister(1234)
 
 
 """
-    vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false)
+    vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false, rng=RNG)
 
 Apply very fast simulated annealing (VFSA) to the function `f`, returning a tuple of the
 best `x` and corresponding energy `E = f(x)`. 
@@ -24,13 +24,18 @@ best `x` and corresponding energy `E = f(x)`.
 - `Tm`: temperature function of iteration `k`, indexable for each model parameter.
 - `NK`: number of iterations (changes in temperature).
 - `NT`: number of moves at each temperature.
+- `saveprogress=:false`:
+    If `saveprogress` is `:false`, return `(x, E)`. If `:all`, return
+    `(x, E, xprogress, Eprogress)` where the "progress" variables save every intermediate
+    value of `x` and `E`.
+- `rng=RNG`: optional random number generator. Otherwise, a package-level `MersenneTwister`
+    RNG will be used.
 
-If `saveprogress` is `:false` return `(x, E)`. If `:all`, return
-`(x, E, xprogress, Eprogress)` where the "progress" variables save every intermediate
-value of `x` and `E`.
-
-The temperature function should be of the form `T(k) = T0*exp(-c*k^(1/NM))` where `NM` is
-the number of model parameters `length(x)`. `Tm` can return multuple values for each of `x`. 
+!!! note
+    
+    For VFSA, the temperature function should be of the form `T(k) = T0*exp(-c*k^(1/NM))`
+    where `NM` is the number of model parameters `length(x)`. `Tm` can return multuple
+    values for each of `x`.
 
 # References
 
@@ -41,7 +46,7 @@ the number of model parameters `length(x)`. `Tm` can return multuple values for 
     Optimization Methods in Geophysical Inversion, 2nd ed., Cambridge University Press,
     2013, doi:10.1017/CBO9780511997570.
 """
-function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false)
+function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false, rng=RNG)
     length(x) == length(xmin) == length(xmax) ||
         throw(ArgumentError("`x`, `xmin`, and `xmax` must have same length"))
     all(xmin .< xmax) || throw(ArgumentError("`xmin` must be less than `xmax`"))
@@ -70,7 +75,7 @@ function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false)
                 xnew = typemax(x[i])
                 while !(xmin[i] <= xnew <= xmax[i])
                     # keep trying until new estimate is in bounds (usually called only once)
-                    u = rand(RNG)
+                    u = rand(rng)
                     y = sign(u - 1/2)*Tm_k(i)*((1 + 1/Tm_k(i))^abs(2*u - 1) - 1)
                     xnew = x[i] + y*(xmax[i] - xmin[i])
                 end
@@ -80,7 +85,7 @@ function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false)
             E′ = f(x′)
             ΔE = E′ - E
 
-            if ΔE <= 0 || rand(RNG) < exp(-ΔE/Ta_k)
+            if ΔE <= 0 || rand(rng) < exp(-ΔE/Ta_k)
                 x .= x′
                 E = E′
             end
