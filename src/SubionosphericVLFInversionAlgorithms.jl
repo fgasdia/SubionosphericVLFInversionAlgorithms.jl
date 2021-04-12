@@ -1,6 +1,6 @@
 module SubionosphericVLFInversionAlgorithms
 
-using Random
+using Random, DelimitedFiles
 using ProgressMeter
 
 export vfsa
@@ -9,7 +9,7 @@ const RNG = MersenneTwister(1234)
 
 
 """
-    vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false, rng=RNG)
+    vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false, filename=nothing, rng=RNG)
 
 Apply very fast simulated annealing (VFSA) to the function `f`, returning a tuple of the
 best `x` and corresponding energy `E = f(x)`. 
@@ -28,6 +28,8 @@ best `x` and corresponding energy `E = f(x)`.
     If `saveprogress` is `:false`, return `(x, E)`. If `:all`, return
     `(x, E, xprogress, Eprogress)` where the "progress" variables save every intermediate
     value of `x` and `E`.
+- `filename=nothing`: if not `nothing`, save '[iteration x... E]` to a CSV file `filename`
+    based on argument of `saveprogress`. 
 - `rng=RNG`: optional random number generator. Otherwise, a package-level `MersenneTwister`
     RNG will be used.
 
@@ -46,26 +48,26 @@ best `x` and corresponding energy `E = f(x)`.
     Optimization Methods in Geophysical Inversion, 2nd ed., Cambridge University Press,
     2013, doi:10.1017/CBO9780511997570.
 """
-function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false, rng=RNG)
+function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false, filename=nothing, rng=RNG)
     length(x) == length(xmin) == length(xmax) ||
         throw(ArgumentError("`x`, `xmin`, and `xmax` must have same length"))
     all(xmin .< xmax) || throw(ArgumentError("`xmin` must be less than `xmax`"))
 
-    x = copy(x)  # so `x` isn't modified in place
     NM = length(x)
+    x = copy(x)  # so `x` isn't modified in place
     x′ = similar(x)
-
+    
     E = f(x)
 
     if saveprogress == :false
         xprogress = nothing
         Eprogress = nothing
     elseif saveprogress == :all
-        xprogress = [similar(x) for i = 1:NK*NT]
+        xprogress = Matrix{eltype(x)}(undef, NM, NK*NT)
         Eprogress = Vector{typeof(E)}(undef, NK*NT)
-        iter = 1
     end
     
+    iter = 1
     @showprogress for k in 1:NK
         Ta_k = Ta(k)
         Tm_k(i) = (t = Tm(k); t isa Number ? t : t[i])
@@ -91,11 +93,25 @@ function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false, rng=RNG)
             end
 
             if saveprogress == :all
-                xprogress[iter] .= x
+                xprogress[:,iter] .= x
                 Eprogress[iter] = E
-                iter += 1
-            end 
+
+                if !isnothing(filename)
+                    let iter=iter, E=E, x=x  # otherwise Core.Box type-instability w/ do
+                        open(filename, "a") do io
+                            println(io, iter, ",", join(x, ","), ",", E)
+                        end
+                    end
+                end
+            end
+            iter += 1
         end
+    end
+
+    if saveprogress != :false
+        # It's faster to write to xprogress as (NM, NK*NT) above, but more useful to have
+        # (NK*NT, NM) for processing
+        xprogress = permutedims(xprogress)
     end
 
     return x, E, xprogress, Eprogress

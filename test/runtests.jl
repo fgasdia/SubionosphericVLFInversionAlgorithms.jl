@@ -1,9 +1,9 @@
-using Test, Random
+using Test, Random, DelimitedFiles
 using SubionosphericVLFInversionAlgorithms
 
 rosenbrock(x) =  (1.0 - x[1])^2 + 100.0 * (x[2] - x[1]^2)^2
-f_univariate(x) = 2x[1]^2+3x[1]+1
-parabola(x) = x[1]^2
+f_univariate(x) = 2only(x)^2 + 3only(x) + 1
+parabola(x) = only(x)^2
 
 function test_rosenbrock()
     x0 = [0.3, 0.8]
@@ -21,6 +21,23 @@ function test_rosenbrock()
     x2, E2 = vfsa(rosenbrock, x0, [-5, -5], [5, 5], T, T, 400, 50; rng=MersenneTwister(1234))
     @test x1 == x2
     @test E1 == E2
+
+    # saveprogress with multiple elements x
+    xbest, Ebest, xprogress, Eprogress = vfsa(rosenbrock, x0, [-5, -5], [5, 5], T, T, 400, 50;
+        saveprogress=:all)
+    @test size(xprogress,1) == 400*50
+    @test length(Eprogress) == 400*50
+    @test xbest == xprogress[end,:]
+    @test Ebest == last(Eprogress)
+
+    # # filename
+    @info " Writing progress to file. This may take a while..."
+    fname, _ = mktemp()
+    xbest, Ebest, xprogress, Eprogress = vfsa(rosenbrock, x0, [-5, -5], [5, 5], T, T, 400, 50;
+        saveprogress=:all, filename=fname)
+    dat = readdlm(fname, ',')
+    @test dat[:,2:3] == xprogress
+    @test dat[:,end] == Eprogress
 end
 
 function test_univariate()
@@ -39,6 +56,22 @@ function test_parabola()
     xbest, Ebest = vfsa(parabola, x0, -1, 1, T, T, 100, 3)
 
     @test only(xbest) ≈ 0 atol=1e-3
+
+    # saveprogress with single element x
+    xbest, Ebest, xprogress, Eprogress = vfsa(parabola, x0, -1, 1, T, T, 100, 3;
+        saveprogress=:all)
+    @test length(xprogress) == 100*3
+    @test length(Eprogress) == 100*3
+    @test xbest == only(last(xprogress))
+    @test Ebest == last(Eprogress)
+
+    # filename
+    fname, _ = mktemp()
+    xbest, Ebest, xprogress, Eprogress = vfsa(parabola, x0, -1, 1, T, T, 100, 3;
+        saveprogress=:all, filename=fname)
+    dat = readdlm(fname, ',')
+    @test dat[:,2] == only.(xprogress)
+    @test dat[:,end] == Eprogress
 end
 
 @testset "SubionosphericVLFInversionAlgorithms" begin
