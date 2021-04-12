@@ -1,6 +1,6 @@
 module SubionosphericVLFInversionAlgorithms
 
-using Random, DelimitedFiles
+using Random
 using ProgressMeter
 
 export vfsa
@@ -28,8 +28,10 @@ best `x` and corresponding energy `E = f(x)`.
     If `saveprogress` is `:false`, return `(x, E)`. If `:all`, return
     `(x, E, xprogress, Eprogress)` where the "progress" variables save every intermediate
     value of `x` and `E`.
-- `filename=nothing`: if not `nothing`, save '[iteration x... E]` to a CSV file `filename`
-    based on argument of `saveprogress`. 
+- `filename=nothing`: if not `nothing`, save '[iteration Ta E x...]` to a CSV file `filename`
+    based on argument of `saveprogress`. Because this appends to the file at each iteration,
+    it is much slower than saving `xprogress` in one step. `filename` should only be set for
+    expensive objective functions `f`.
 - `rng=RNG`: optional random number generator. Otherwise, a package-level `MersenneTwister`
     RNG will be used.
 
@@ -99,7 +101,7 @@ function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false, filename=no
                 if !isnothing(filename)
                     let iter=iter, E=E, x=x  # otherwise Core.Box type-instability w/ do
                         open(filename, "a") do io
-                            println(io, iter, ",", join(x, ","), ",", E)
+                            println(io, iter, ",", Ta_k, ",", E, ",", join(x, ","))
                         end
                     end
                 end

@@ -31,13 +31,13 @@ function test_rosenbrock()
     @test Ebest == last(Eprogress)
 
     # # filename
-    @info " Writing progress to file. This may take a while..."
+    @info "  Writing progress to file. This may take a while..."
     fname, _ = mktemp()
     xbest, Ebest, xprogress, Eprogress = vfsa(rosenbrock, x0, [-5, -5], [5, 5], T, T, 400, 50;
         saveprogress=:all, filename=fname)
     dat = readdlm(fname, ',')
-    @test dat[:,2:3] == xprogress
-    @test dat[:,end] == Eprogress
+    @test dat[:,4:end] == xprogress
+    @test dat[:,3] == Eprogress
 end
 
 function test_univariate()
@@ -62,7 +62,7 @@ function test_parabola()
         saveprogress=:all)
     @test length(xprogress) == 100*3
     @test length(Eprogress) == 100*3
-    @test xbest == only(last(xprogress))
+    @test only(xbest) == last(xprogress)
     @test Ebest == last(Eprogress)
 
     # filename
@@ -70,11 +70,12 @@ function test_parabola()
     xbest, Ebest, xprogress, Eprogress = vfsa(parabola, x0, -1, 1, T, T, 100, 3;
         saveprogress=:all, filename=fname)
     dat = readdlm(fname, ',')
-    @test dat[:,2] == only.(xprogress)
-    @test dat[:,end] == Eprogress
+    @test dat[:,end] == xprogress[:]
+    @test dat[:,3] == Eprogress
 end
 
 @testset "SubionosphericVLFInversionAlgorithms" begin
+    @info "Testing SubionosphericVLFInversionAlgorithms"
     test_rosenbrock()
     test_univariate()
     test_parabola()
