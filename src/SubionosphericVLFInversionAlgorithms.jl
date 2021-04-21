@@ -28,7 +28,7 @@ best `x` and corresponding energy `E = f(x)`.
     If `saveprogress` is `:false`, return `(x, E)`. If `:all`, return
     `(x, E, xprogress, Eprogress)` where the "progress" variables save every intermediate
     value of `x` and `E`.
-- `filename=nothing`: if not `nothing`, save '[iteration Ta E x...]` to a CSV file `filename`
+- `filename=nothing`: if not `nothing`, save `[iteration Ta E x...]` to a CSV file `filename`
     based on argument of `saveprogress`. Because this appends to the file at each iteration,
     it is much slower than saving `xprogress` in one step. `filename` should only be set for
     expensive objective functions `f`.
@@ -67,6 +67,14 @@ function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false, filename=no
     elseif saveprogress == :all
         xprogress = Matrix{eltype(x)}(undef, NM, NK*NT)
         Eprogress = Vector{typeof(E)}(undef, NK*NT)
+
+        if !isnothing(filename)
+            let E=E, x=x  # otherwise Core.Box type-instability w/ do
+                open(filename, "a") do io
+                    println(io, 0, ",", Ta(0.0), ",", E, ",", join(x, ","))
+                end
+            end
+        end
     end
     
     iter = 1

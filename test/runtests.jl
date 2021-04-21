@@ -36,8 +36,8 @@ function test_rosenbrock()
     xbest, Ebest, xprogress, Eprogress = vfsa(rosenbrock, x0, [-5, -5], [5, 5], T, T, 400, 50;
         saveprogress=:all, filename=fname)
     dat = readdlm(fname, ',')
-    @test dat[:,4:end] == xprogress
-    @test dat[:,3] == Eprogress
+    @test dat[2:end,4:end] == xprogress
+    @test dat[2:end,3] == Eprogress
 end
 
 function test_univariate()
@@ -70,8 +70,8 @@ function test_parabola()
     xbest, Ebest, xprogress, Eprogress = vfsa(parabola, x0, -1, 1, T, T, 100, 3;
         saveprogress=:all, filename=fname)
     dat = readdlm(fname, ',')
-    @test dat[:,end] == xprogress[:]
-    @test dat[:,3] == Eprogress
+    @test dat[2:end,end] == xprogress[:]
+    @test dat[2:end,3] == Eprogress
 end
 
 @testset "SubionosphericVLFInversionAlgorithms" begin
