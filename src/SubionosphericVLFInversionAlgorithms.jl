@@ -9,14 +9,15 @@ const RNG = MersenneTwister(1234)
 
 
 """
-    vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=nothing,
+    vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=typemin(Ta(1)),
         saveprogress=:false, filename=nothing, rng=RNG)
 
 Apply very fast simulated annealing (VFSA) to the function `f`, returning a tuple of the
 best `x` and corresponding energy `E = f(x)`.
 
-This function will run for `NK` total iterations unless `Ta_min` is specified; then this
-function returns if `Ta` drops below `Ta_min`. 
+This function will run for `NK` total iterations or until `Ta < Ta_min`. By default
+`Ta` is effectively ignored. The progress meter will only reflect progress based on `NT`
+and `NK`, but the temperature will be printed in the meter.
 
 # Arguments
 
@@ -55,22 +56,18 @@ function returns if `Ta` drops below `Ta_min`.
     Optimization Methods in Geophysical Inversion, 2nd ed., Cambridge University Press,
     2013, doi:10.1017/CBO9780511997570.
 """
-function vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=nothing,
+function vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=typemin(Ta(1)),
         saveprogress=:false, filename=nothing, rng=RNG)
     length(x) == length(xmin) == length(xmax) ||
         throw(ArgumentError("`x`, `xmin`, and `xmax` must have same length"))
     all(xmin .< xmax) || throw(ArgumentError("`xmin` must be less than `xmax`"))
 
-    # Set default parameters if not specified by user
-    if isnothing(Ta_min)
-        Ta_min = typemin(Ta(1))
-    end
-    Ta_min_exit = false  # flag if we exit because Ta(k) < Ta_min
-
     # Initialize
     NM = length(x)
     x = copy(x)  # so `x` isn't modified in place
     x′ = similar(x)
+
+    Ta_min_exit = false  # flag if we exit because Ta(k) < Ta_min
     
     E = f(x)
 
@@ -89,15 +86,19 @@ function vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=nothing,
             end
         end
     end
+
+    pm = Progress(NK*NT)
+    generate_showvalues(iter, T) = () -> [(:iter,iter), (:Ta,T)]
     
     iter = 1
-    @showprogress for k in 1:NK
+    for k in 1:NK
         Ta_k = Ta(k)
         Tm_k(i) = (t = Tm(k); t isa Number ? t : t[i])
 
         if Ta_k < Ta_min
             iter -= 1  # undo the increment from end of last loop
             Ta_min_exit = true
+            finish!(pm)
             break
         end
 
@@ -134,6 +135,7 @@ function vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=nothing,
                 end
             end
             iter += 1
+            next!(pm; showvalues=generate_showvalues(iter, Ta_k))
         end
     end
 
