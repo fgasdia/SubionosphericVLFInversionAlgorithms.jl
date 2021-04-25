@@ -9,10 +9,14 @@ const RNG = MersenneTwister(1234)
 
 
 """
-    vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false, filename=nothing, rng=RNG)
+    vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=nothing,
+        saveprogress=:false, filename=nothing, rng=RNG)
 
 Apply very fast simulated annealing (VFSA) to the function `f`, returning a tuple of the
-best `x` and corresponding energy `E = f(x)`. 
+best `x` and corresponding energy `E = f(x)`.
+
+This function will run for `NK` total iterations unless `Ta_min` is specified; then this
+function returns if `Ta` drops below `Ta_min`. 
 
 # Arguments
 
@@ -22,8 +26,9 @@ best `x` and corresponding energy `E = f(x)`.
 - `xmax`: upper bound of each model parameter.
 - `Ta`: temperature function of iteration `k` for acceptance criterion.
 - `Tm`: temperature function of iteration `k`, indexable for each model parameter.
-- `NK`: number of iterations (changes in temperature).
-- `NT`: number of moves at each temperature.
+- `NT=1`: number of moves at each temperature.
+- `NK=1000`: total number of iterations (calls of `f`).
+- `Ta_min=nothing`: minimum temperature `Ta` before returning.
 - `saveprogress=:false`:
     If `saveprogress` is `:false`, return `(x, E)`. If `:all`, return
     `(x, E, xprogress, Eprogress)` where the "progress" variables save every intermediate
@@ -50,11 +55,19 @@ best `x` and corresponding energy `E = f(x)`.
     Optimization Methods in Geophysical Inversion, 2nd ed., Cambridge University Press,
     2013, doi:10.1017/CBO9780511997570.
 """
-function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false, filename=nothing, rng=RNG)
+function vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=nothing,
+        saveprogress=:false, filename=nothing, rng=RNG)
     length(x) == length(xmin) == length(xmax) ||
         throw(ArgumentError("`x`, `xmin`, and `xmax` must have same length"))
     all(xmin .< xmax) || throw(ArgumentError("`xmin` must be less than `xmax`"))
 
+    # Set default parameters if not specified by user
+    if isnothing(Ta_min)
+        Ta_min = typemin(Ta(1))
+    end
+    Ta_min_exit = false  # flag if we exit because Ta(k) < Ta_min
+
+    # Initialize
     NM = length(x)
     x = copy(x)  # so `x` isn't modified in place
     x′ = similar(x)
@@ -81,6 +94,12 @@ function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false, filename=no
     @showprogress for k in 1:NK
         Ta_k = Ta(k)
         Tm_k(i) = (t = Tm(k); t isa Number ? t : t[i])
+
+        if Ta_k < Ta_min
+            iter -= 1  # undo the increment from end of last loop
+            Ta_min_exit = true
+            break
+        end
 
         for n in 1:NT
             for i in 1:NM
@@ -119,6 +138,12 @@ function vfsa(f, x, xmin, xmax, Ta, Tm, NK, NT; saveprogress=:false, filename=no
     end
 
     if saveprogress != :false
+        if Ta_min_exit
+            # Trim unused rows (because of early exit)
+            resize!(Eprogress, iter)
+            xprogress = xprogress[:,1:iter]
+        end
+
         # It's faster to write to xprogress as (NM, NK*NT) above, but more useful to have
         # (NK*NT, NM) for processing
         xprogress = permutedims(xprogress)
