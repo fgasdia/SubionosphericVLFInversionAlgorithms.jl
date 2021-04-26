@@ -9,15 +9,16 @@ const RNG = MersenneTwister(1234)
 
 
 """
-    vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=typemin(Ta(1)),
+    vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=typemin(Ta(1)), E_min=nothing,
         saveprogress=:false, filename=nothing, rng=RNG)
 
 Apply very fast simulated annealing (VFSA) to the function `f`, returning a tuple of the
 best `x` and corresponding energy `E = f(x)`.
 
-This function will run for `NK` total iterations or until `Ta < Ta_min`. By default
-`Ta` is effectively ignored. The progress meter will only reflect progress based on `NT`
-and `NK`, but the temperature will be printed in the meter.
+This function will run for `NK` total iterations or until: `Ta < Ta_min` or `E < E_min`.
+By default `Ta_min` and `E_min` are effectively ignored.
+The progress meter will only reflect progress based on `NT*NK`, but the temperature and
+error will be printed in the meter.
 
 # Arguments
 
@@ -29,7 +30,8 @@ and `NK`, but the temperature will be printed in the meter.
 - `Tm`: temperature function of iteration `k`, indexable for each model parameter.
 - `NT=1`: number of moves at each temperature.
 - `NK=1000`: total number of iterations (calls of `f`).
-- `Ta_min=nothing`: minimum temperature `Ta` before returning.
+- `Ta_min=typemin(Ta(1))`: minimum temperature `Ta` before returning.
+- `E_min=nothing`: minimum error `f(x)` before returning.
 - `saveprogress=:false`:
     If `saveprogress` is `:false`, return `(x, E)`. If `:all`, return
     `(x, E, xprogress, Eprogress)` where the "progress" variables save every intermediate
@@ -56,7 +58,7 @@ and `NK`, but the temperature will be printed in the meter.
     Optimization Methods in Geophysical Inversion, 2nd ed., Cambridge University Press,
     2013, doi:10.1017/CBO9780511997570.
 """
-function vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=typemin(Ta(1)),
+function vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=typemin(Ta(1)), E_min=nothing,
         saveprogress=:false, filename=nothing, rng=RNG)
     length(x) == length(xmin) == length(xmax) ||
         throw(ArgumentError("`x`, `xmin`, and `xmax` must have same length"))
@@ -66,10 +68,12 @@ function vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=typemin(Ta(1)),
     NM = length(x)
     x = copy(x)  # so `x` isn't modified in place
     x′ = similar(x)
-
-    Ta_min_exit = false  # flag if we exit because Ta(k) < Ta_min
     
     E = f(x)
+    if isnothing(E_min)
+        E_min = typemin(E)
+    end
+    early_exit = false  # flag if we exit earlier than NK*NT
 
     if saveprogress == :false
         xprogress = nothing
@@ -88,16 +92,16 @@ function vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=typemin(Ta(1)),
     end
 
     pm = Progress(NK*NT)
-    generate_showvalues(iter, T) = () -> [(:iter,iter), (:Ta,T)]
+    generate_showvalues(iter, T, E) = () -> [(:iter,iter), (:Ta,T), (:E,E)]
     
     iter = 1
     for k in 1:NK
         Ta_k = Ta(k)
         Tm_k(i) = (t = Tm(k); t isa Number ? t : t[i])
 
-        if Ta_k < Ta_min
+        if Ta_k < Ta_min || E <= E_min
             iter -= 1  # undo the increment from end of last loop
-            Ta_min_exit = true
+            early_exit = true
             finish!(pm)
             break
         end
@@ -135,12 +139,12 @@ function vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=typemin(Ta(1)),
                 end
             end
             iter += 1
-            next!(pm; showvalues=generate_showvalues(iter, Ta_k))
+            next!(pm; showvalues=generate_showvalues(iter, Ta_k, E))
         end
     end
 
     if saveprogress != :false
-        if Ta_min_exit
+        if early_exit
             # Trim unused rows (because of early exit)
             resize!(Eprogress, iter)
             xprogress = xprogress[:,1:iter]

@@ -84,9 +84,14 @@ function test_parabola()
     @test dat[2:end,3] == Eprogress
 
     # Test Ta_min argument
-    x5, E5 = vfsa(parabola, x0, -1, 1, T, T; NT=3, Ta_min=dat[end,2], rng=MersenneTwister(1234))
+    x5, E5 = vfsa(parabola, x0, -1, 1, T, T; NT=3, NK=1000, Ta_min=dat[end,2], rng=MersenneTwister(1234))
     @test xbest == x5
     @test Ebest == E5
+
+    # Test E_min argument
+    x6, E6 = vfsa(parabola, x0, -1, 1, T, T; NT=3, NK=1000, E_min=dat[end,3], rng=MersenneTwister(1234))
+    @test xbest == x6
+    @test Ebest == E6
 
     # Test default `NT = 1`
     x1, E1 = vfsa(parabola, x0, -1, 1, T, T; NK=300, NT=1, rng=MersenneTwister(1234))
