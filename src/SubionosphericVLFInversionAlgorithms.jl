@@ -1,9 +1,13 @@
 module SubionosphericVLFInversionAlgorithms
 
-using Random
+using Core: Argument
+using Random, Statistics, LinearAlgebra
+using StaticArrays
 using ProgressMeter
 
-export vfsa
+include("utils.jl")
+
+export vfsa, gaspari_cohn99_410
 
 const RNG = MersenneTwister(1234)
 
@@ -156,6 +160,100 @@ function vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=typemin(Ta(1)), E_
     end
 
     return x, E, xprogress, Eprogress
+end
+
+"""
+    LETKF_measupdate()
+
+LETKF (Local Ensemble Transform Kalman Filter) analysis update applied locally, following
+the steps in [^1].
+
+# Arguments
+
+- `xb::AbstractMatrix`: Ensemble matrix of states having size `(nstates, nensemble)`.
+    Note!: It is assumed the first half of rows are ``h′`` and the second half are ``β``.
+- `data`: Stacked vector of observations `[amps...; phases...]`.
+- `num_cells`: Number of grid cells. Usually this is a divisor of `nstates`.
+- `R`: Vector of ``σ²`` for data. This is the diagonal of ``R``.
+
+# References
+
+[^1]: B. R. Hunt, E. J. Kostelich, and I. Szunyogh, “Efficient data assimilation for
+    spatiotemporal chaos: A local ensemble transform Kalman filter,” Physica D: Nonlinear
+    Phenomena, vol. 230, no. 1, pp. 112–126, Jun. 2007.
+"""
+function LETKF_measupdate(f, xb, data, R; ρ=1.1, localization=nothing, datatypes=(:amp, :phase))
+    num_cells = length(xb) ÷ 2
+    if !isnothing(localization)
+        length(localization) == num_cells ||
+            throw(ArgumentError("`num_cells` and `localization` must be same length"))
+    end
+
+    # 1.
+    yb = f(xb)  # f should handle phase wrap
+
+    ybar = mean(yb, dims=2)
+    Y = yb .- ybar
+
+    # 2.
+    xbbar = mean(!isnan, xb, dims=2)  # TODO: we skip NaN handling above - does it matter?
+    Xb = xb .- xbbar
+
+    # 3. Localization
+    xa = similar(xb)
+    for n in 1:num_cells
+        idx = SVector(n, n+num_cells)  # for h′ and β
+        if isnothing(localization)
+
+        else
+            loc = view(localization, n, :)
+            loc_mask = loc .> 0
+            if !any(x->x > 0, loc)
+                # No measurements in range, nothing to update
+                xa[idx] .= xb[idx]
+                continue
+            end
+        end
+
+        xbbar_loc = view(xbbar, idx)
+        Xb_loc = view(Xb, idx, :)
+
+        # Localize and flatten measurements
+        ybar_loc = view(ybar, loc_mask)
+        Y_loc = view(Y, loc_mask)
+
+        data_loc = view(data, loc_mask)  # TODO: are these sizes right?
+        R_loc = view(R, loc_mask)
+
+        # 4.
+        # Localization regularization here (HXf' = Yb)
+        # from NergerLars2012
+        # NOTE: Assumes diagonal R!
+        dreg = 1
+
+        C = Y_loc'/R_loc*dreg
+
+        # 5.
+        # Can apply ρ here if H is linear, or if ρ is close to 1
+        invPatilde = (ens_size - 1)*I/ρ + C*Y_loc
+
+        # 6.
+        # Symmetric square root
+        Wa = sqrt((ens_size - 1)/invPatilde)
+
+        # 7.
+        if :amp in datatypes && :phase in datatypes
+            Δ = data_loc[1]
+        end
+
+
+        wabar = Patilde*C*delta  # TODO: fix Patilde
+
+        wa = Wa + wabar
+
+        # 8.
+        xa[idx] = Xb_loc*wa + xbbar_loc
+    end
 end
 
 end # module
