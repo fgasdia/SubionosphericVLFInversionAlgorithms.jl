@@ -2,12 +2,13 @@ module SubionosphericVLFInversionAlgorithms
 
 using Core: Argument
 using Random, Statistics, LinearAlgebra
-using StaticArrays
+using StaticArrays, AxisKeys
 using ProgressMeter
 
 include("utils.jl")
 
-export vfsa, gaspari_cohn99_410
+export vfsa, LETKF_measupdate
+export gaspari_cohn99_410
 
 const RNG = MersenneTwister(1234)
 
@@ -163,7 +164,8 @@ function vfsa(f, x, xmin, xmax, Ta, Tm; NT=1, NK=1000, Ta_min=typemin(Ta(1)), E_
 end
 
 """
-    LETKF_measupdate()
+    LETKF_measupdate(f, xb, data, R, y_grid, x_grid, pathnames, ens_size;
+        ρ=1.1, localization=nothing, datatypes=(:amp, :phase)) → (xa, yb)
 
 LETKF (Local Ensemble Transform Kalman Filter) analysis update applied locally, following
 the steps in [^1].
@@ -182,48 +184,72 @@ the steps in [^1].
     spatiotemporal chaos: A local ensemble transform Kalman filter,” Physica D: Nonlinear
     Phenomena, vol. 230, no. 1, pp. 112–126, Jun. 2007.
 """
-function LETKF_measupdate(f, xb, data, R; ρ=1.1, localization=nothing, datatypes=(:amp, :phase))
-    num_cells = length(xb) ÷ 2
+function LETKF_measupdate(f, xb, data, R, y_grid, x_grid, pathnames, ens_size;
+        ρ=1.1, localization=nothing, datatypes=(:amp, :phase))
+    num_cells = length(y_grid)*length(x_grid)
+    gridshape = (length(y_grid), length(x_grid))
     if !isnothing(localization)
-        length(localization) == num_cells ||
-            throw(ArgumentError("`num_cells` and `localization` must be same length"))
+        size(localization) == (num_cells, length(pathnames)) ||
+            throw(ArgumentError("Size of `localization` must be `(num_cells, num_paths)`"))
     end
 
     # 1.
     yb = f(xb)  # f should handle phase wrap
 
-    ybar = mean(yb, dims=2)
-    Y = yb .- ybar
+    # Make sure xb, yb, and data are KeyedArrays for easier book keeping
+    xb = KeyedArray(xb; field=SVector(:h, :b), y=y_grid, x=x_grid, ens=1:ens_size)
+    yb = KeyedArray(yb; field=SVector(:amp, :phase), path=pathnames, ens=1:ens_size)
+    data = KeyedArray(data; field=SVector(:amp, :phase), path=pathnames)
+
+    ybar = mean(yb, dims=:ens)
+
+    if :amp in datatypes && :phase in datatypes
+        Y = similar(yb)
+        Y(:amp) .= yb(:amp) .- ybar(:amp)
+        Y(:phase) .= phasediff.(yb(:phase), ybar(:phase))
+    elseif :amp in datatypes
+        Y = yb(:amp) .- ybar(:amp)
+    elseif :phase in datatypes
+        Y = phasediff.(yb(:phase), ybar(:phase))
+    end
 
     # 2.
-    xbbar = mean(!isnan, xb, dims=2)  # TODO: we skip NaN handling above - does it matter?
+    xbbar = mean(xb, dims=:ens)
     Xb = xb .- xbbar
 
     # 3. Localization
     xa = similar(xb)
+    CI = CartesianIndices(gridshape)
     for n in 1:num_cells
-        idx = SVector(n, n+num_cells)  # for h′ and β
-        if isnothing(localization)
+        yidx, xidx = CI[n][1], CI[n][2]
 
+        # Currently localization is binary (cell is included or not)
+        if isnothing(localization)
+            loc_mask = trues(length(pathnames))
         else
             loc = view(localization, n, :)
             loc_mask = loc .> 0
-            if !any(x->x > 0, loc)
+            if !any(loc_mask)
                 # No measurements in range, nothing to update
-                xa[idx] .= xb[idx]
+                xa(y=Index(yidx), x=Index(xidx)) .= xb(y=Index(yidx), x=Index(xidx))
                 continue
             end
         end
 
-        xbbar_loc = view(xbbar, idx)
-        Xb_loc = view(Xb, idx, :)
-
         # Localize and flatten measurements
-        ybar_loc = view(ybar, loc_mask)
-        Y_loc = view(Y, loc_mask)
+        ybar_loc = ybar(path=Index(loc_mask))
+        Y_loc = Y(path=Index(loc_mask))
 
-        data_loc = view(data, loc_mask)  # TODO: are these sizes right?
-        R_loc = view(R, loc_mask)
+        data_loc = data(path=Index(loc_mask))
+
+        if :amp in datatypes && :phase in datatypes
+            Y_loc = [Y_loc(:amp); Y_loc(:phase)]
+            Rinv_loc = Diagonal([fill(1/R[1], count(loc_mask)); fill(1/R[2], count(loc_mask))])
+        elseif :amp in datatypes
+            Rinv_loc = Diagonal(fill(1/R[1], count(loc_mask)))
+        elseif :phase in datatypes
+            Rinv_loc = Diagonal(fill(1/R[2], count(loc_mask)))
+        end
 
         # 4.
         # Localization regularization here (HXf' = Yb)
@@ -231,29 +257,48 @@ function LETKF_measupdate(f, xb, data, R; ρ=1.1, localization=nothing, datatype
         # NOTE: Assumes diagonal R!
         dreg = 1
 
-        C = Y_loc'/R_loc*dreg
+        C = AxisKeys.keyless(Y_loc)'*Rinv_loc*dreg
 
         # 5.
         # Can apply ρ here if H is linear, or if ρ is close to 1
-        invPatilde = (ens_size - 1)*I/ρ + C*Y_loc
+        Patilde = inv((ens_size - 1)*I/ρ + C*Y_loc)
 
         # 6.
         # Symmetric square root
-        Wa = sqrt((ens_size - 1)/invPatilde)
+        Wa = sqrt((ens_size - 1)*Hermitian(AxisKeys.unname(Patilde)))
 
         # 7.
         if :amp in datatypes && :phase in datatypes
-            Δ = data_loc[1]
+            Δ = [data_loc(:amp) .-  ybar_loc(:amp); phasediff.(data_loc(:phase), ybar_loc(:phase))]
+        elseif :amp in datatypes
+            Δ = data_loc(:amp) .- ybar_loc(:amp)
+        elseif :phase in datatypes
+            Δ = phasediff.(data_loc(:phase), ybar_loc(:phase))
         end
 
-
-        wabar = Patilde*C*delta  # TODO: fix Patilde
-
-        wa = Wa + wabar
+        wabar = Patilde*C*Δ
+        wa = Wa .+ wabar
 
         # 8.
-        xa[idx] = Xb_loc*wa + xbbar_loc
+        xbbar_loc = xbbar(y=Index(yidx), x=Index(xidx))
+        Xb_loc = Xb(y=Index(yidx), x=Index(xidx))
+
+        xa(y=Index(yidx), x=Index(xidx)) .= Xb_loc*wa .+ xbbar_loc
     end
+
+    return xa, yb
+end
+
+"""
+    LETKF_measupdate(f, xb::KeyedArray, data::KeyedArray, R;
+        ρ=1.1, localization=nothing, datatypes=(:amp, :phase))
+"""
+function LETKF_measupdate(f, xb::KeyedArray, data::KeyedArray, R;
+        ρ=1.1, localization=nothing, datatypes=(:amp, :phase))
+    y_grid, x_grid, = xb.y, xb.x
+    pathnames = data.path
+    ens_size = length(xb.ens)
+    LETKF_measupdate(f, xb, data, R, y_grid, x_grid, pathnames, ens_size; ρ, localization, datatypes)
 end
 
 end # module

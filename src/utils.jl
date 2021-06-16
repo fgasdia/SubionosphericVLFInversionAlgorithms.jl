@@ -27,3 +27,23 @@ function gaspari_cohn99_410(z, c)
 
     return C0
 end
+
+"""
+    phasediff(a, b; deg=false))
+
+Compute the smallest angle `a - b` in radians.
+"""
+function phasediff(a, b; deg=false)
+    if deg
+        a, b = deg2rad(a), deg2rad(b)
+    end
+
+    d = mod2pi(a) - mod2pi(b)
+    d = mod2pi(d + π) - π
+
+    if deg
+        d = rad2deg(d)
+    end
+
+    return d
+end
