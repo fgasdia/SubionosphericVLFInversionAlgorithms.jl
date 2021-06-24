@@ -10,7 +10,7 @@ struct GeoStatsInterpolant{T,T2,T3}
 end
 
 """
-    pathpts(tx, rx; dist=100e3) -> (line, wpts)
+    pathpts(tx, rx; dist=100e3) → (line, wpts)
 
 Return a `GeodesicLine` and waypoints `wpts` from `tx` to `rx` of path tuple `p`
 with waypoints every `dist` meters along the path.
@@ -64,11 +64,11 @@ function model_observation(itp::GeoStatsInterpolant, geox, tx, rx, datetime; pat
 
     # Projected wpts
     pts = PointSet(permutedims(
-        transform(wgs84, itp.projection, [getindex.(wpts, :lon) getindex.(wpts, :lat)])
+        transform(wgs84(), itp.projection, [getindex.(wpts, :lon) getindex.(wpts, :lat)])
     ))
 
     problem = EstimationProblem(geox, pts, (:h′, :β))
-    solution = solve(problem, itp.solver)
+    solution = solve(problem, itp.method)
 
     geoaz = inverse(tx.longitude, tx.latitude, rx.longitude, rx.latitude).azi
 
@@ -101,7 +101,7 @@ function model_observation(itp::ScatteredInterpolant, hitp, bitp, tx, rx, dateti
 
     # Projected wpts
     pts = permutedims(
-        transform(wgs84, itp.projection, [getindex.(wpts, :lon) getindex.(wpts, :lat)])
+        transform(wgs84(), itp.projection, [getindex.(wpts, :lon) getindex.(wpts, :lat)])
     )
 
     geoaz = inverse(tx.longitude, tx.latitude, rx.longitude, rx.latitude).azi
@@ -168,20 +168,20 @@ Return the model observations `(amps, phases)` for spatial interpolation method 
 Uses LWPC as the forward model if `lwpc` is true; otherwise, uses LongwaveModePropagator.jl.
 """
 function model(itp::GeoStatsInterpolant, x, paths, datetime; pathstep=100e3, lwpc=true)
-    half = length(x) ÷ 2
-    hprimes = x[1:half]
-    betas = x[half+1:end]
+    hprimes = x(:h)
+    betas = x(:b)
 
-    pts = PointSet([GeoStats.Point(x, y) for (x, y) in itp.coords])
-    geox = georef((h′=hprimes, β=betas), pts)
+    pts = PointSet(itp.coords)
+    geox = georef((h′=vec(hprimes), β=vec(betas)), pts)
 
-    batch = BatchInput{BasicInput}()
+    batch = BatchInput{ExponentialInput}()
     batch.name = "estimate"
     batch.description = ""
     batch.datetime = Dates.now()
-    batch.inputs = Vector{BasicInput}(undef, length(paths))
+    batch.inputs = Vector{ExponentialInput}(undef, length(paths))
 
     for i in eachindex(paths)
+        tx, rx = paths[i]
         input = model_observation(itp, geox, tx, rx, datetime; pathstep)
         batch.inputs[i] = input
     end
@@ -215,19 +215,10 @@ function model(itp::ScatteredInterpolant, x, paths, datetime; pathstep=100e3, lw
     hprimes = x(:h)
     betas = x(:b)
 
-    gridshape = (length(x.y), length(x.x))
-    xy_grid = Matrix{Float64}(undef, 2, count(!isnan, hprimes))
-    CI = CartesianIndices(gridshape)
-    idx = 1
-    for i in eachindex(hprimes)
-        if !isnan(hprimes[i])
-            xy_grid[:,idx] .= (x.x[CI[i][2]], x.y[CI[i][1]])
-            idx += 1
-        end
-    end
+    xygrid = build_xygrid(x)
 
-    hitp = ScatteredInterpolation.interpolate(itp.method, xy_grid, filter(!isnan, hprimes))
-    bitp = ScatteredInterpolation.interpolate(itp.method, xy_grid, filter(!isnan, betas))
+    hitp = ScatteredInterpolation.interpolate(itp.method, xygrid, filter(!isnan, hprimes))
+    bitp = ScatteredInterpolation.interpolate(itp.method, xygrid, filter(!isnan, betas))
 
     batch = BatchInput{ExponentialInput}()
     batch.name = "estimate"
@@ -317,4 +308,19 @@ function model(hbfcn::Function, paths, datetime; pathstep=100e3, lwpc=true)
     end
 
     return amps, phases
+end
+
+function build_xygrid(x)
+    hprimes = x(:h)
+    gridshape = (length(x.y), length(x.x))
+    xygrid = Matrix{Float64}(undef, 2, count(!isnan, hprimes))
+    CI = CartesianIndices(gridshape)
+    idx = 1
+    for i in eachindex(hprimes)
+        if !isnan(hprimes[i])
+            xygrid[:,idx] .= (x.x[CI[i][2]], x.y[CI[i][1]])
+            idx += 1
+        end
+    end
+    return xygrid
 end
