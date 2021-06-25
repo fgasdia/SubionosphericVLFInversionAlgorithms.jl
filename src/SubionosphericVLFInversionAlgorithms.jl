@@ -11,12 +11,14 @@ using ProgressMeter
 using LMPTools, PropagationModelPrep
 
 export vfsa, LETKF_measupdate
-export model, ensemble_model, ScatteredInterpolant, GeoStatsInterpolant
+export model, ensemble_model!, ScatteredInterpolant, GeoStatsInterpolant
 export wgs84, esri_102010
 export gaspari1999_410, lonlatgrid_dists, obs2grid_diamondpill
 export pathname
 
 const RNG = MersenneTwister(1234)
+
+project_path(parts...) = normpath(@__DIR__, "..", parts...)
 
 wgs84() = Projection("+proj=longlat +datum=WGS84 +no_defs")
 

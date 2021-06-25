@@ -11,34 +11,9 @@ rosenbrock(x) =  (1.0 - x[1])^2 + 100.0 * (x[2] - x[1]^2)^2
 f_univariate(x) = 2only(x)^2 + 3only(x) + 1
 parabola(x) = only(x)^2
 
+include("utils.jl")
 include("simulatedannealing.jl")
-
-function testscenario()
-    dt = DateTime(2019, 2, 15, 18, 30)
-    tx = TRANSMITTER[:NAA]
-    rx = Receiver("Boulder", 40.02, -105.27, 0.0, VerticalDipole())
-    paths = [(tx, rx)]
-
-    westbound, eastbound = -109.5, -63
-    southbound, northbound = 36.5, 48.3
-    dr = 500e3  # m
-
-    bounds = [westbound northbound; eastbound northbound; westbound southbound; eastbound southbound]
-    pts = transform(wgs84(), esri_102010(), bounds)
-    xmin, xmax = extrema(pts[:,1])
-    ymin, ymax = extrema(pts[:,2])
-
-    x_grid = range(xmin, xmax; step=dr)
-    y_grid = range(ymin, ymax; step=dr)
-
-    x = KeyedArray(fill(NaN, 2, length(y_grid), length(x_grid)); field=[:h, :b], y=y_grid, x=x_grid)
-    x(:h) .= 70.0
-    x(:b) .= 0.4
-
-    return x, paths, dt
-end
-
-Base.strip(m::KeyedArray) = AxisKeys.keyless(AxisKeys.unname(m))
+include("kalmanfilter.jl")
 
 function test_models()
     x, paths, dt = testscenario()
@@ -56,19 +31,21 @@ function test_models()
 
     # Make sure fields are filled in appropriately
     @test all(x->isapprox(x, 70, atol=0.1), input.hprimes)
-    @test all(x->isapprox(x, 0.4, atol=0.1), input.betas)
+    @test all(x->isapprox(x, 0.4, atol=0.01), input.betas)
     @test input.frequency == 24e3
     @test range(tx, rx) < input.output_ranges[end] < 2*range(tx, rx)
     @test all(0 .< input.ground_epsrs .<= 81)
 
-    a, p = model(itp, x, paths, dt; lwpc=false)
+    a, p = model(itp, x, paths, dt; lwpc=false, pathstep=500e3)
     @test length(a) == length(p) == 1
     @test abs(only(p)) <= 2π
 
     if Sys.iswindows() && isfile("C:\\LWPCv21\\lwpm.exe")
-        a, p = model(itp, x, paths, dt; lwpc=true)
-        @test length(a) == length(p) == 1
-        @test abs(only(p)) <= 2π
+        al, pl = model(itp, x, paths, dt; lwpc=true, pathstep=500e3)
+        @test length(al) == length(pl) == 1
+        @test abs(only(pl)) <= 2π
+        @test rad2deg(abs(only(p - pl))) < 1
+        @test abs(only(a - al)) < 1
     else
         @info " Skipping LWPC"
     end
@@ -93,14 +70,40 @@ function test_models()
     @test range(tx, rx) < input.output_ranges[end] < 2*range(tx, rx)
     @test all(0 .< input.ground_epsrs .<= 81)
 
-    a, p = model(itp, x, paths, dt; lwpc=false)
+    a, p = model(itp, x, paths, dt; lwpc=false, pathstep=500e3)
     @test length(a) == length(p) == 1
     @test abs(only(p)) <= 2π
 
     if Sys.iswindows() && isfile("C:\\LWPCv21\\lwpm.exe")
-        a, p = model(itp, x, paths, dt; lwpc=true)
-        @test length(a) == length(p) == 1
-        @test abs(only(p)) <= 2π
+        al, pl = model(itp, x, paths, dt; lwpc=true, pathstep=500e3)
+        @test length(al) == length(pl) == 1
+        @test abs(only(pl)) <= 2π
+        @test rad2deg(abs(only(p - pl))) < 1
+        @test abs(only(a - al)) < 1
+    else
+        @info " Skipping LWPC"
+    end
+
+    # ## hbfcn
+    hbfcn(lo, la, dt) = ferguson(la, zenithangle(la, lo, dt), dt)
+    input = SIA.model_observation(hbfcn, tx, rx, dt)
+
+    @test all(x->isapprox(x, 73, atol=1), input.hprimes)
+    @test all(x->isapprox(x, 0.3, atol=0.1), input.betas)
+    @test input.frequency == 24e3
+    @test range(tx, rx) < input.output_ranges[end] < 2*range(tx, rx)
+    @test all(0 .< input.ground_epsrs .<= 81)
+
+    a, p = model(hbfcn, paths, dt; lwpc=false, pathstep=500e3)
+    @test length(a) == length(p) == 1
+    @test abs(only(p)) <= 2π
+
+    if Sys.iswindows() && isfile("C:\\LWPCv21\\lwpm.exe")
+        al, pl = model(hbfcn, paths, dt; lwpc=true, pathstep=500e3)
+        @test length(al) == length(pl) == 1
+        @test abs(only(pl)) <= 2π
+        @test rad2deg(abs(only(p - pl))) < 1
+        @test abs(only(a - al)) < 1
     else
         @info " Skipping LWPC"
     end
@@ -121,5 +124,11 @@ end
         @info "Testing forward models"
         @info " This may take a minute..."
         test_models()
+    end
+
+    @testset "Kalman filter" begin
+        @info "Testing Kalman filter"
+        test_arguments()
+        test_day()
     end
 end

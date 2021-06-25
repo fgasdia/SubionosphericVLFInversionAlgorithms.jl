@@ -24,3 +24,22 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
 ProgressMeter = "1.1"
+PropagationModelPrep = "0.0.9"
+julia = "1.6"
+
+[extras]
+AxisKeys = "94b1ba4f-4ee9-5380-92f1-94cde586c3c5"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+GeoStats = "dcc97b0b-8ce5-5539-9008-bb190f959ef6"
+GeographicLib = "c96ba436-a6fe-11e9-10ab-c9f3919c93d1"
+LMPTools = "9da4b389-a4e8-40b7-9cd7-952b7f4c5d81"
+LongwaveModePropagator = "38c6559a-e0a7-48c6-827d-3f02e2d19cec"
+Proj4 = "9a7e659c-8ee8-5706-894e-f68f43bc57ea"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+ScatteredInterpolation = "3f865c0f-6dca-5f4d-999b-29fe1e7e3c92"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["AxisKeys", "Dates", "DelimitedFiles", "Distributions", "GeoStats", "GeographicLib", "LMPTools", "LongwaveModePropagator", "Proj4", "Random", "ScatteredInterpolation", "Test"]

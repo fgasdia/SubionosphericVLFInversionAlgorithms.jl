@@ -27,11 +27,11 @@ spatiotemporal chaos: A local ensemble transform Kalman filter,” Physica D: No
 Phenomena, vol. 230, no. 1, pp. 112–126, Jun. 2007.
 """
 function LETKF_measupdate(H, xb, y, R;
-    ρ=1.1, localization=nothing, datatypes=(:amp, :phase), deg=true)
+    ρ=1.1, localization=nothing, datatypes=(:amp, :phase))
 
     # Make sure xb, yb, and y are correct KeyedArrays
-    xb = KeyedArray(xb; field=[:h, :b], y=xb.y, x=xb.x, ens=xb.ens)
-    y = KeyedArray(y; field=[:amp, :phase], path=y.path)
+    # xb = KeyedArray(xb; field=[:h, :b], y=xb.y, x=xb.x, ens=xb.ens)
+    # y = KeyedArray(y; field=[:amp, :phase], path=y.path)
 
     gridshape = (length(xb.y), length(xb.x))
     ncells = prod(gridshape)
@@ -44,18 +44,18 @@ function LETKF_measupdate(H, xb, y, R;
 
     # 1.
     yb = H(xb)
-    yb = KeyedArray(yb; field=[:amp, :phase], path=y.path, ens=xb.ens)
+    # yb = KeyedArray(yb; field=[:amp, :phase], path=y.path, ens=xb.ens)
     
     ybar = mean(yb, dims=:ens)
 
     if :amp in datatypes && :phase in datatypes
         Y = similar(yb)
         Y(:amp) .= yb(:amp) .- ybar(:amp)
-        Y(:phase) .= phasediff.(yb(:phase), ybar(:phase); deg)
+        Y(:phase) .= phasediff.(yb(:phase), ybar(:phase))
     elseif :amp in datatypes
         Y = yb(:amp) .- ybar(:amp)
     elseif :phase in datatypes
-        Y = phasediff.(yb(:phase), ybar(:phase); deg)
+        Y = phasediff.(yb(:phase), ybar(:phase))
     end
 
     # 2.
@@ -109,11 +109,11 @@ function LETKF_measupdate(H, xb, y, R;
 
         # 7.
         if :amp in datatypes && :phase in datatypes
-            Δ = [y_loc(:amp) .-  ybar_loc(:amp); phasediff.(y_loc(:phase), ybar_loc(:phase); deg)]
+            Δ = [y_loc(:amp) .-  ybar_loc(:amp); phasediff.(y_loc(:phase), ybar_loc(:phase))]
         elseif :amp in datatypes
             Δ = y_loc(:amp) .- ybar_loc(:amp)
         elseif :phase in datatypes
-            Δ = phasediff.(y_loc(:phase), ybar_loc(:phase); deg)
+            Δ = phasediff.(y_loc(:phase), ybar_loc(:phase))
         end
 
         wabar = Patilde*C*Δ
@@ -126,17 +126,17 @@ function LETKF_measupdate(H, xb, y, R;
         xa(y=Index(yidx), x=Index(xidx)) .= Xb_loc*wa .+ xbbar_loc
     end
 
-    return xa, yb
+    return xa
 end
 
 """
-    ensemble_model(f, x, pathnames, ens_size; deg=true)
+    ensemble_model!(ym, f, x, pathnames)
 
 Run the forward model `f` with `KeyedArray` argument `x` for each member of `x.ens`.
 """
-function ensemble_model(f, x, pathnames; deg=true)
-    ym = KeyedArray(Array{Float64,3}(undef, 2, length(pathnames), length(x.ens));
-            field=SVector(:amp, :phase), path=pathnames, ens=x.ens)
+function ensemble_model!(ym, f, x, pathnames)
+    # ym = KeyedArray(Array{Float64,3}(undef, 2, length(pathnames), length(x.ens));
+    #         field=SVector(:amp, :phase), path=pathnames, ens=x.ens)
     for e in x.ens
         a, p = f(x(ens=e))
         ym(:amp)(ens=e) .= a
@@ -146,11 +146,7 @@ function ensemble_model(f, x, pathnames; deg=true)
     # Fit a Gaussian to phase data ensemble, then use wrap the phases from ±180° from the mean
     for p in pathnames
         μ = fit(Normal{Float64}, ym(:phase)(path=p)).μ
-        if deg
-            ym(:phase)(path=p) .= mod.(ym(:phase)(path=p) .- μ .+ 180, 360) .+ μ .- 180
-        else
-            ym(:phase)(path=p) .= mod2pi.(ym(:phase)(path=p) .- μ .+ π) .+ μ .- π
-        end
+        ym(:phase)(path=p) .= mod2pi.(ym(:phase)(path=p) .- μ .+ π) .+ μ .- π
     end
 
     return ym

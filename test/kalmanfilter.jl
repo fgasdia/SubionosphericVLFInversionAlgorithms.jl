@@ -1,30 +1,9 @@
-
-function tmppaths()
-    transmitters = [TRANSMITTER[:NLK], TRANSMITTER[:NML]]
-
-    receivers = [
-        Receiver("Whitehorse", 60.724, -135.043, 0.0, VerticalDipole()),
-        # Receiver("Churchill", 58.74, -94.085, 0.0, VerticalDipole()),
-        # Receiver("Stony Rapids", 59.253, -105.834, 0.0, VerticalDipole()),
-        # Receiver("Fort Smith", 60.006, -111.92, 0.0, VerticalDipole()),
-        # Receiver("Bella Bella", 52.1675508, -128.1545219, 0.0, VerticalDipole()),
-        # Receiver("Nahanni Butte", 61.0304412, -123.3926734, 0.0, VerticalDipole()),
-        # Receiver("Juneau", 58.32, -134.41, 0.0, VerticalDipole()),
-        # Receiver("Ketchikan", 55.35, -131.673, 0.0, VerticalDipole()),
-        # Receiver("Winnipeg", 49.8822, -97.1308, 0.0, VerticalDipole()),
-        # Receiver("IslandLake", 53.8626, -94.6658, 0.0, VerticalDipole()),
-        # Receiver("Gillam", 56.3477, -94.7093, 0.0, VerticalDipole())
-    ]
-
-    return [(tx, rx) for tx in transmitters for rx in receivers]
-end
-
 """
-    arguments()
+    test_arguments()
 
 Toy problem that demonstrates the correct form of the arguments to `LETKF_measupdate`.
 """
-function arguments()
+function test_arguments()
     # ## Setup
 
     # Later we will need the propagation paths. Here they are:
@@ -140,23 +119,144 @@ function arguments()
     # This package provides the function `ensemble_model` as an example wrapper function
     # for LWPC or LMP.
 
-    # Usually H would look something like this:
-    #==
-    model_projection = esri_102010
-    lwpc = true
-    itp = ScatteredInterpolant(ThinPlate(), model_projection)
-    H(x) = ensemble_model(model(itp, x, paths, dt; pathstep=100e3, lwpc), x, pathnames; deg=lwpc)
-    ==#
-    
-    # But here we'll use a fake H
-    H(x) = ensemble_model(x->(rand(length(paths)), mod2pi.(rand(length(paths)))), x, pathname.(paths); deg=false)
-
     # First, let's create a KeyedArray to save the forward model run results to.
     ym = KeyedArray(Array{Float64,4}(undef, 2, npaths, ens_size, ntimes);
         field=[:amp, :phase], path=pathname.(paths), ens=xb.ens, t=0:ntimes-1)
 
+    # Here we'll use a fake H
+    H(x,i) = ensemble_model!(ym(t=i-1), z->(rand(length(paths)), mod2pi.(rand(length(paths)))), x, pathname.(paths))
+    
     # Let's use time t = 1
     i = 1
-    LETKF_measupdate(H, xb(t=i-1), y(t=i), R;
-        ρ=1.1, localization=localization, datatypes=(:amp, :phase), deg=false)
+    xa, yb = LETKF_measupdate(x->H(x,i), xb(t=i-1), y(t=i), R;
+        ρ=1.1, localization=localization, datatypes=(:amp, :phase))
+    @test !isnothing(xa)
+    xb(t=i) .= xa
+    ym(t=i-1) .= yb
+end
+
+function test_day()
+    if Sys.iswindows() && isfile("C:\\LWPCv21\\lwpm.exe")
+        @info " Running LETKF with LWPC. This may take a while."
+    else
+        @warn "Kalman filter: `test_day()` only runs on Windows with LWPC"
+        return
+    end
+
+    transmitters = [TRANSMITTER[:NLK], TRANSMITTER[:NML]]
+    receivers = [
+        Receiver("Whitehorse", 60.724, -135.043, 0.0, VerticalDipole()),
+        Receiver("Churchill", 58.74, -94.085, 0.0, VerticalDipole()),
+        Receiver("Stony Rapids", 59.253, -105.834, 0.0, VerticalDipole()),
+        Receiver("Fort Smith", 60.006, -111.92, 0.0, VerticalDipole()),
+        Receiver("Bella Bella", 52.1675508, -128.1545219, 0.0, VerticalDipole()),
+        Receiver("Nahanni Butte", 61.0304412, -123.3926734, 0.0, VerticalDipole()),
+        Receiver("Juneau", 58.32, -134.41, 0.0, VerticalDipole()),
+        Receiver("Ketchikan", 55.35, -131.673, 0.0, VerticalDipole()),
+        Receiver("Winnipeg", 49.8822, -97.1308, 0.0, VerticalDipole()),
+        Receiver("IslandLake", 53.8626, -94.6658, 0.0, VerticalDipole()),
+        Receiver("Gillam", 56.3477, -94.7093, 0.0, VerticalDipole())
+    ]
+    paths = [(tx, rx) for tx in transmitters for rx in receivers]
+    npaths = length(paths)
+
+    dt = DateTime(2019, 2, 15, 18, 30)
+    ens_size = 10  # size of the ensemble... the number of ionospheres
+    ntimes = 6  # how many time steps to take
+
+    # lonlat grid
+    westbound, eastbound = -136, -90
+    southbound, northbound = 49, 62
+    dr = 500e3  # m
+
+    bounds = [westbound northbound; eastbound northbound; westbound southbound; eastbound southbound]
+    pts = transform(wgs84(), esri_102010(), bounds)
+    (xmin, xmax), (ymin, ymax) = extrema(pts, dims=1)
+
+    x_grid = range(xmin, xmax; step=dr)
+    y_grid = range(ymin, ymax; step=dr)
+
+    gridshape = (length(y_grid), length(x_grid))  # useful later
+    ncells = prod(gridshape)
+    CI = CartesianIndices(gridshape)
+
+    xy_grid = Matrix{Float64}(undef, 2, ncells)
+    for i in axes(xy_grid,2)
+        xy_grid[:,i] .= (x_grid[CI[i][2]], y_grid[CI[i][1]])
+    end
+    lola = permutedims(transform(esri_102010(), wgs84(), permutedims(xy_grid)))
+    
+    # ## Prior
+
+    x = KeyedArray(fill(NaN, 2, length(y_grid), length(x_grid), ens_size, ntimes+1),
+            field=[:h, :b], y=y_grid, x=x_grid, ens=1:ens_size, t=0:ntimes)
+
+    # Prior standard deviation of h′ and β
+    B = [1.8, 0.04]  # σ_h′, σ_β
+
+    distarr = lonlatgrid_dists(lola)
+    gc = gaspari1999_410(distarr, 2000e3)  # scale length of 2000 km
+    
+    # prior = [ferguson(lonlats[2,i], zenithangle(lonlats[2,i], lonlats[1,i], dt), dt) for i in axes(lonlats,2)]
+    # h_prior, b_prior = getindex.(prior, 1), getindex.(prior, 2)
+
+    hdistribution = MvNormal(fill(75, ncells), B[1]^2*gc)  # yes, w/ matrix argument we need variance
+    bdistribution = MvNormal(fill(0.4, ncells), B[2]^2*gc)
+
+    # Then we build the ensemble and reshape it to the grid shape
+    h_init = reshape(rand(hdistribution, ens_size), gridshape..., ens_size)
+    b_init = reshape(rand(bdistribution, ens_size), gridshape..., ens_size)
+    replace!(x->x < 0.16 ? 0.16 : x, b_init)
+
+    localization, _ = obs2grid_diamondpill(lola, paths; overshoot=200e3, halfwidth=600e3)
+    for i in axes(localization,1)
+        # Check if not a single path affects gridcell i
+        if all(x->x==0, localization[i,:])
+            h_init[CI[i],:] .= NaN
+            b_init[CI[i],:] .= NaN
+        end
+    end
+    x(:h)(t=0) .= h_init
+    x(:b)(t=0) .= b_init
+
+    # ## Prep measurements
+
+    σA = 0.1  # amplitude, dB
+    σp = deg2rad(1.0)  # phase, rad
+
+    R = [fill(σA^2, npaths); fill(σp^2, npaths)]
+
+    dt = DateTime(2020, 3, 1, 20, 00)  # day
+    # trueiono = [ferguson(lola[2,i], zenithangle(lola[2,i], lola[1,i], dt), dt) for i in axes(lola,2)]
+
+    hbfcn(lo, la, dt) = ferguson(la, zenithangle(la, lo, dt), dt)
+    oa, op = model(hbfcn, paths, dt; pathstep=500e3)  # "truth" observations
+
+    y = KeyedArray(Array{Float64,3}(undef, 2, npaths, ntimes);
+        field=[:amp, :phase], path=pathname.(paths), t=1:ntimes)
+    y(:amp) .= oa .+ σA.*randn(npaths, ntimes)
+    y(:phase) .= mod2pi.(op .+ σp.*rand(npaths, ntimes))
+
+    itp = ScatteredInterpolant(ThinPlate(), esri_102010())
+
+    ym = KeyedArray(Array{Float64,4}(undef, 2, npaths, ens_size, ntimes);
+        field=[:amp, :phase], path=pathname.(paths), ens=x.ens, t=0:ntimes-1)
+    H(x,i) = SIA.ensemble_model!(ym(t=i-1), z->model(itp, z, paths, dt; pathstep=500e3, lwpc=true), x, pathname.(paths))
+
+    ma, mp = model(itp, x(t=0)(ens=1), paths, dt; pathstep=500e3, lwpc=true)
+    yh = H(x(t=0),1)
+    @test yh(ens=1)(:amp) ≈ ma
+    @test yh(ens=1)(:phase) ≈ mp
+
+    for i = 1:ntimes
+        xa = LETKF_measupdate(x->H(x,i), x(t=i-1), y(t=i), R;
+            ρ=1.1, localization=localization, datatypes=(:amp, :phase))
+        @test !isnothing(xa)
+        x(t=i) .= xa
+    end
+
+    for i = 1:ntimes
+        @test all(x->abs(x)<120, ym(t=i-1)(:amp))
+        @test all(x->abs(x)<2π, ym(t=i-1)(:phase))
+    end
 end
