@@ -181,3 +181,11 @@ function phasediff(a, b; deg=false)
 
     return d
 end
+
+"""
+    strip(m::KeyedArray)
+
+Remove named dims and axis keys from a `KeyedArray`, returning a view of the underlying
+array.
+"""
+Base.strip(m::KeyedArray) = AxisKeys.keyless(AxisKeys.unname(m))

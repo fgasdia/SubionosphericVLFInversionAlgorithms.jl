@@ -21,5 +21,3 @@ function testscenario(dr=500e3)
 
     return x, paths, dt
 end
-
-Base.strip(m::KeyedArray) = AxisKeys.keyless(AxisKeys.unname(m))

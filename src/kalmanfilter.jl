@@ -97,7 +97,7 @@ function LETKF_measupdate(H, xb, y, R;
         end
 
         # 4.
-        C = AxisKeys.keyless(Y_loc)'*Rinv_loc
+        C = strip(Y_loc)'*Rinv_loc
 
         # 5.
         # Can apply ρ here if H is linear, or if ρ is close to 1
@@ -105,7 +105,7 @@ function LETKF_measupdate(H, xb, y, R;
 
         # 6.
         # Symmetric square root
-        Wa = sqrt((ens_size - 1)*Hermitian(AxisKeys.unname(Patilde)))
+        Wa = sqrt((ens_size - 1)*Hermitian(strip(Patilde)))
 
         # 7.
         if :amp in datatypes && :phase in datatypes
