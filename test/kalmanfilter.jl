@@ -113,7 +113,7 @@ function dayscenario()
     y = KeyedArray(Array{Float64,3}(undef, 2, npaths, ntimes);
         field=[:amp, :phase], path=pathname.(paths), t=1:ntimes)
     y(:amp) .= oa .+ σA.*randn(npaths, ntimes)
-    y(:phase) .= mod2pi.(op .+ σp.*rand(npaths, ntimes))
+    y(:phase) .= mod2pi.(op .+ σp.*randn(npaths, ntimes))
 
     return paths, x, y, R, localization, dt
 end
