@@ -128,7 +128,6 @@ end
 
     @testset "Kalman filter" begin
         @info "Testing Kalman filter"
-        test_arguments()
-        test_day()
+        test_letkf(dayscenario)
     end
 end

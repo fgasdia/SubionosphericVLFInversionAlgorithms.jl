@@ -16,11 +16,12 @@ function dayscenario()
         Receiver("Gillam", 56.3477, -94.7093, 0.0, VerticalDipole())
     ]
     paths = [(tx, rx) for tx in transmitters for rx in receivers]
+    npaths = length(paths)
 
     # The DateTime will be needed for the prior ionosphere and possibly the IGRF magnetic field
     dt = DateTime(2020, 3, 1, 20, 00)  # day
 
-    ens_size = 10  # size of the ensemble... the number of ionospheres
+    ens_size = 30  # size of the ensemble... the number of ionospheres
     ntimes = 2  # how many time steps to take
 
     # y_grid and x_grid (or `y` and `x`) are the coordinates of estimation grid points in
@@ -114,7 +115,7 @@ function dayscenario()
     y(:amp) .= oa .+ σA.*randn(npaths, ntimes)
     y(:phase) .= mod2pi.(op .+ σp.*rand(npaths, ntimes))
 
-    return paths, x, y, R, dt
+    return paths, x, y, R, localization, dt
 end
 
 function test_letkf(scenario)
@@ -125,9 +126,9 @@ function test_letkf(scenario)
         return
     end
 
-    paths, x, y, R, dt = scenario()
+    paths, x, y, R, localization, dt = scenario()
     npaths = length(paths)
-    ntimes = length(x.time)
+    ntimes = length(y.t)
     ens_size = length(x.ens)
     
     itp = ScatteredInterpolant(ThinPlate(), esri_102010())
@@ -136,29 +137,29 @@ function test_letkf(scenario)
     # appropriate KeyedArray.
     # This package provides the function `ensemble_model!` as an example wrapper function
     # for LWPC or LMP.
-    ym = KeyedArray(Array{Float64,4}(undef, 2, npaths, ens_size, ntimes);
-        field=[:amp, :phase], path=pathname.(paths), ens=x.ens, t=0:ntimes-1)
-    H(x,i) = SIA.ensemble_model!(ym(t=i-1), z->model(itp, z, paths, dt; pathstep=500e3, lwpc=true), x, pathname.(paths))
+    ym = KeyedArray(Array{Float64,4}(undef, 2, npaths, ens_size, ntimes+1);
+        field=[:amp, :phase], path=pathname.(paths), ens=x.ens, t=0:ntimes)
+    H(x,t) = SIA.ensemble_model!(ym(t=t), z->model(itp, z, paths, dt; pathstep=500e3, lwpc=true), x)
 
     ma, mp = model(itp, x(t=0)(ens=1), paths, dt; pathstep=500e3, lwpc=true)
-    yh = H(x(t=0),1)
+    yh = H(x(t=0),0)
     @test yh(ens=1)(:amp) ≈ ma
     @test yh(ens=1)(:phase) ≈ mp
 
     # Normal LETKF_measupdate
     for i = 1:ntimes
-        xa = LETKF_measupdate(x->H(x,i), x(t=i-1), y(t=i), R;
+        xa = LETKF_measupdate(x->H(x,i-1), x(t=i-1), y(t=i), R;
             ρ=1.1, localization=localization, datatypes=(:amp, :phase))
         @test !isnothing(xa)
         @test all(x->abs(x)<120, ym(t=i-1)(:amp))
-        @test all(x->abs(x)<2π, ym(t=i-1)(:phase))
+        @test all(x->abs(x)<4π, ym(t=i-1)(:phase))
         x(t=i) .= xa
     end
 
     # LETKF_measupdate w/ amplitude only
     for i = 1:ntimes
-        xa = LETKF_measupdate(x->H(x,i), x(t=i-1), y(t=i), R;
-            ρ=1.1, localization=localization, datatypes=(:amp))
+        xa = LETKF_measupdate(x->H(x,i-1), x(t=i-1), y(t=i), R[1:npaths];
+            ρ=1.1, localization=localization, datatypes=(:amp,))
         @test !isnothing(xa)
         @test all(x->abs(x)<120, ym(t=i-1)(:amp))
         x(t=i) .= xa
@@ -166,10 +167,10 @@ function test_letkf(scenario)
 
     # LETKF_measupdate w/ phase only
     for i = 1:ntimes
-        xa = LETKF_measupdate(x->H(x,i), x(t=i-1), y(t=i), R;
-            ρ=1.1, localization=localization, datatypes=(:phase))
+        xa = LETKF_measupdate(x->H(x,i-1), x(t=i-1), y(t=i), R[npaths+1:end];
+            ρ=1.1, localization=localization, datatypes=(:phase,))
         @test !isnothing(xa)
-        @test all(x->abs(x)<120, ym(t=i-1)(:amp))
+        @test all(x->abs(x)<4π, ym(t=i-1)(:phase))
         x(t=i) .= xa
     end
 end

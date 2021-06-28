@@ -27,7 +27,7 @@ spatiotemporal chaos: A local ensemble transform Kalman filter,” Physica D: No
 Phenomena, vol. 230, no. 1, pp. 112–126, Jun. 2007.
 """
 function LETKF_measupdate(H, xb, y, R;
-    ρ=1.1, localization=nothing, datatypes=(:amp, :phase))
+    ρ=1.1, localization=nothing, datatypes::Tuple=(:amp, :phase))
 
     # Make sure xb, yb, and y are correct KeyedArrays
     # xb = KeyedArray(xb; field=[:h, :b], y=xb.y, x=xb.x, ens=xb.ens)
@@ -35,10 +35,11 @@ function LETKF_measupdate(H, xb, y, R;
 
     gridshape = (length(xb.y), length(xb.x))
     ncells = prod(gridshape)
+    npaths = length(y.path)
     ens_size = length(xb.ens)
 
     if !isnothing(localization)
-        size(localization) == (ncells, length(y.path)) ||
+        size(localization) == (ncells, npaths) ||
             throw(ArgumentError("Size of `localization` must be `(ncells, npaths)`"))
     end
 
@@ -70,7 +71,7 @@ function LETKF_measupdate(H, xb, y, R;
 
         # Currently localization is binary (cell is included or not)
         if isnothing(localization)
-            loc_mask = trues(length(pathnames))
+            loc_mask = trues(npaths)
         else
             loc = view(localization, n, :)
             loc_mask = loc .> 0
@@ -84,20 +85,18 @@ function LETKF_measupdate(H, xb, y, R;
         # Localize and flatten measurements
         ybar_loc = ybar(path=Index(loc_mask))
         Y_loc = Y(path=Index(loc_mask))
-
         y_loc = y(path=Index(loc_mask))
 
         if :amp in datatypes && :phase in datatypes
             Y_loc = [Y_loc(:amp); Y_loc(:phase)]
-            Rinv_loc = Diagonal([fill(1/R[1], count(loc_mask)); fill(1/R[2], count(loc_mask))])
-        elseif :amp in datatypes
-            Rinv_loc = Diagonal(fill(1/R[1], count(loc_mask)))
-        elseif :phase in datatypes
-            Rinv_loc = Diagonal(fill(1/R[2], count(loc_mask)))
+            R_loc = @views Diagonal([R[1:npaths][loc_mask]; R[npaths+1:end][loc_mask]])
+        else
+            # Only amp or phase
+            R_loc = @views Diagonal(R[loc_mask])
         end
 
         # 4.
-        C = strip(Y_loc)'*Rinv_loc
+        C = strip(Y_loc)'/R_loc
 
         # 5.
         # Can apply ρ here if H is linear, or if ρ is close to 1
@@ -130,11 +129,11 @@ function LETKF_measupdate(H, xb, y, R;
 end
 
 """
-    ensemble_model!(ym, f, x, pathnames)
+    ensemble_model!(ym, f, x)
 
 Run the forward model `f` with `KeyedArray` argument `x` for each member of `x.ens`.
 """
-function ensemble_model!(ym, f, x, pathnames)
+function ensemble_model!(ym, f, x)
     # ym = KeyedArray(Array{Float64,3}(undef, 2, length(pathnames), length(x.ens));
     #         field=SVector(:amp, :phase), path=pathnames, ens=x.ens)
     for e in x.ens
@@ -144,7 +143,7 @@ function ensemble_model!(ym, f, x, pathnames)
     end
 
     # Fit a Gaussian to phase data ensemble, then use wrap the phases from ±180° from the mean
-    for p in pathnames
+    for p in ym.path
         μ = fit(Normal{Float64}, ym(:phase)(path=p)).μ
         ym(:phase)(path=p) .= mod2pi.(ym(:phase)(path=p) .- μ .+ π) .+ μ .- π
     end

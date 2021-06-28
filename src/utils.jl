@@ -184,8 +184,9 @@ end
 
 """
     strip(m::KeyedArray)
+    strip(m::NamedDimsArray)
 
-Remove named dims and axis keys from a `KeyedArray`, returning a view of the underlying
-array.
+Remove named dims and axis keys from `m`, returning a view of the underlying array.
 """
 Base.strip(m::KeyedArray) = AxisKeys.keyless(AxisKeys.unname(m))
+Base.strip(m::NamedDimsArray) = AxisKeys.unname(m)
