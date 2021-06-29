@@ -4,10 +4,15 @@
 Compactly supported 5th-order piecewise rational function that resembles a Gaussian evaluated
 over distances `z` with scale length `c`.
 
+The length-scale ``L = 1 / (-f″(0))^{1/2}`` is ``c(0.3)^{1/2}``. The corresponding Gaussian
+function is ``G(z, L) = exp(-z^2/(2L²))``.
+
+See also: [`gaussianstddev`](@ref), [`compactlengthscale`](@ref)
+
 # References
 
 [^1]: Gaspari Cohn 1999, Construction of correlation functions in two and three dimensions.
-    Eqn 4.10
+    Eqn 4.10, Eqn 4.16
 """
 function gaspari1999_410(z, c)
     C0 = zeros(size(z))
@@ -27,6 +32,31 @@ function gaspari1999_410(z, c)
 
     return C0
 end
+
+"""
+    gaussianstddev(c)
+
+Compute the standard deviation (length-scale) of a Gaussian function in terms of the
+length-scale `c` of the compactly supported function [`gaspari1999_410`](@ref).
+
+See also: [`compactlengthscale`](@ref), [`gaspari1999_410`](@ref)
+
+# References
+
+[^1]: Gaspari Cohn 1999, Construction of correlation functions in two and three dimensions.
+    Eqn 4.12 and surrounding text.
+"""
+gaussianstddev(c) = c*sqrt(0.3)
+
+"""
+    compactlengthscale(σ)
+
+Compute the compact length-scale `c` of the function [`gaspari1999_410`](@ref) in terms of
+the standard deviation `σ` (also called ``L``) of a Gaussian function.
+
+See also: [`gaussianstddev`](@ref), [`gaspari1999_410`](@ref)
+"""
+compactlengthscale(σ) = σ/sqrt(0.3)
 
 """
     lonlatgrid_dists(lonlats)
