@@ -144,9 +144,19 @@ function ensemble_model!(ym, f, x)
 
     # Fit a Gaussian to phase data ensemble, then use wrap the phases from ±180° from the mean
     for p in ym.path
-        μ = fit(Normal{Float64}, ym(:phase)(path=p)).μ
-        ym(:phase)(path=p) .= mod2pi.(ym(:phase)(path=p) .- μ .+ π) .+ μ .- π
+        ym(:phase)(path=p) .= modgaussian(ym(:phase)(path=p))
     end
 
     return ym
+end
+
+"""
+    modgaussian(phases)
+
+Fit a Gaussian distribution to a vector of `phases` in radians and return the phases shifted
+such they are wrapped within ±π about the mean of the fit.
+"""
+function modgaussian(phases)
+    μ = fit(Normal{Float64}, phases).μ
+    return mod2pi.(phases .- μ .+ π) .+ μ .- π
 end

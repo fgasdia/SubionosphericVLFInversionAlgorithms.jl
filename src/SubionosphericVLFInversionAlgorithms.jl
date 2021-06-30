@@ -13,7 +13,7 @@ using LMPTools, PropagationModelPrep
 export vfsa, LETKF_measupdate
 export model, ensemble_model!, ScatteredInterpolant, GeoStatsInterpolant
 export wgs84, esri_102010
-export gaspari1999_410, lonlatgrid_dists, obs2grid_diamondpill
+export gaspari1999_410, lonlatgrid_dists, obs2grid_diamondpill, modgaussian
 export pathname
 
 const RNG = MersenneTwister(1234)
