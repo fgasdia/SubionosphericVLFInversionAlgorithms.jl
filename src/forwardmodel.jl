@@ -1,6 +1,7 @@
-struct ScatteredInterpolant{T,T2}
+struct ScatteredInterpolant{T,T2,T3}
     method::T
     projection::T2
+    coords::T3
 end
 
 struct GeoStatsInterpolant{T,T2,T3}
@@ -215,10 +216,8 @@ function model(itp::ScatteredInterpolant, x, paths, datetime; pathstep=100e3, lw
     hprimes = x(:h)
     betas = x(:b)
 
-    xygrid = build_xygrid(x)
-
-    hitp = ScatteredInterpolation.interpolate(itp.method, xygrid, filter(!isnan, hprimes))
-    bitp = ScatteredInterpolation.interpolate(itp.method, xygrid, filter(!isnan, betas))
+    hitp = ScatteredInterpolation.interpolate(itp.method, itp.coords, filter(!isnan, hprimes))
+    bitp = ScatteredInterpolation.interpolate(itp.method, itp.coords, filter(!isnan, betas))
 
     batch = BatchInput{ExponentialInput}()
     batch.name = "estimate"
@@ -308,19 +307,4 @@ function model(hbfcn::Function, paths, datetime; pathstep=100e3, lwpc=true)
     end
 
     return amps, phases
-end
-
-function build_xygrid(x)
-    hprimes = x(:h)
-    gridshape = (length(x.y), length(x.x))
-    xygrid = Matrix{Float64}(undef, 2, count(!isnan, hprimes))
-    CI = CartesianIndices(gridshape)
-    idx = 1
-    for i in eachindex(hprimes)
-        if !isnan(hprimes[i])
-            xygrid[:,idx] .= (x.x[CI[i][2]], x.y[CI[i][1]])
-            idx += 1
-        end
-    end
-    return xygrid
 end

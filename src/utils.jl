@@ -1,191 +1,4 @@
 """
-    gaspari1999_410(z, c)
-
-Compactly supported 5th-order piecewise rational function that resembles a Gaussian evaluated
-over distances `z` with scale length `c`.
-
-The length-scale ``L = 1 / (-f″(0))^{1/2}`` is ``c(0.3)^{1/2}``. The corresponding Gaussian
-function is ``G(z, L) = exp(-z^2/(2L²))``.
-
-See also: [`gaussianstddev`](@ref), [`compactlengthscale`](@ref)
-
-# References
-
-[^1]: Gaspari Cohn 1999, Construction of correlation functions in two and three dimensions.
-    Eqn 4.10, Eqn 4.16
-"""
-function gaspari1999_410(z, c)
-    C0 = zeros(size(z))
-
-    for i in eachindex(C0)
-        tz = z[i]
-        if 0 <= abs(tz) <= c
-            C0[i] = -(1/4)*(abs(tz)/c)^5 + (1/2)*(tz/c)^4 + (5/8)*(abs(tz)/c)^3 -
-                (5/3)*(tz/c)^2 + 1
-        elseif c <= abs(tz) <= 2c
-            C0[i] = (1/12)*(abs(tz)/c)^5 - (1/2)*(tz/c)^4 + (5/8)*(abs(tz)/c)^3 +
-                (5/3)*(tz/c)^2 - 5*(abs(tz)/c) + 4 - (2/3)*c/abs(tz)
-        # elseif 2c <= abs(tz)
-        # C0[i] = 0
-        end
-    end
-
-    return C0
-end
-
-"""
-    gaussianstddev(c)
-
-Compute the standard deviation (length-scale) of a Gaussian function in terms of the
-length-scale `c` of the compactly supported function [`gaspari1999_410`](@ref).
-
-See also: [`compactlengthscale`](@ref), [`gaspari1999_410`](@ref)
-
-# References
-
-[^1]: Gaspari Cohn 1999, Construction of correlation functions in two and three dimensions.
-    Eqn 4.12 and surrounding text.
-"""
-gaussianstddev(c) = c*sqrt(0.3)
-
-"""
-    compactlengthscale(σ)
-
-Compute the compact length-scale `c` of the function [`gaspari1999_410`](@ref) in terms of
-the standard deviation `σ` (also called ``L``) of a Gaussian function.
-
-See also: [`gaussianstddev`](@ref), [`gaspari1999_410`](@ref)
-"""
-compactlengthscale(σ) = σ/sqrt(0.3)
-
-"""
-    lonlatgrid_dists(lonlats)
-
-Compute distance in meters between every grid point in a matrix of `permutedims([lon lat])`.
-"""
-function lonlatgrid_dists(lonlats)
-    N = size(lonlats,2)
-    distarr = Matrix{Float64}(undef, N, N)
-    for j in axes(lonlats,2)
-        for i in axes(lonlats,2)
-            distarr[i,j] = inverse(lonlats[1,j], lonlats[2,j], lonlats[1,i], lonlats[2,i]).dist
-        end
-    end
-    return distarr
-end
-
-"""
-    obs2grid_diamondpill(lonlats, paths; overshoot=200e3, halfwidth=300e3) → (localization, diamonds)
-
-Return a localization matrix of shape `(ngrid, npaths)` where `0.0` means the path does not
-affect the grid cell or `1.0` meaning the path does.
-
-`lonlats` is a dense matrix of longitudes and latitude points.
-`paths` is a vector of (transmitter, receiver) tuples representing each propagation path.
-
-`diamonds` is a vector of vectors of points describing the localization pattern around each
-path.
-
-This function uses a localization shape that is shaped like a diamond that extends from the
-transmitter to the receiver that widens to a width of `2halfwidth` meters in the middle.
-The diamond actually overshoots the transmitter and receiver by `overshoot` meters and forms
-a circle around the transmitter/receiver that joins with the diamond towards the
-receiver/transmitter.
-
-The localization is `1.0` if the grid point `intersects` the geometric Polygon of the diamond. 
-"""
-function obs2grid_diamondpill(lonlats, paths; overshoot=200e3, halfwidth=300e3)
-    # transmitters, receivers, _ = paths()
-    ngrid = size(lonlats, 2)
-    npaths = length(paths)
-
-    arc = 0:15:360-15
-
-    localization = Matrix{Float64}(undef, ngrid, npaths)
-    diamonds = Vector{Vector{Vector{Float64}}}()
-    sizehint!(diamonds, npaths)
-    # diamonds = []
-
-    for p in eachindex(paths)
-        tx = paths[p][1]
-        rx = paths[p][2]
-
-        # Get circle of points around transmitter
-        tx_circ = [(pt = forward(tx.longitude, tx.latitude, az, overshoot); (pt.lon, pt.lat)) for az in arc]
-        
-        # Min and max latitude (only) of tx_circ
-        tx_min = (Inf, Inf)
-        tx_max = (-Inf, -Inf)
-        for i in eachindex(tx_circ)
-            if tx_circ[i][2] < tx_min[2]
-                tx_min = tx_circ[i]
-            elseif tx_circ[i][2] > tx_max[2]
-                tx_max = tx_circ[i]
-            end
-        end
-
-        # Get circle of points around receiver
-        rx_circ = [(pt = forward(rx.longitude, rx.latitude, az, overshoot); (pt.lon, pt.lat)) for az in arc]
-    
-        # Min and max latitude (only) of rx_circ
-        rx_min = (Inf, Inf)
-        rx_max = (-Inf, -Inf)
-        for i in eachindex(rx_circ)
-            if rx_circ[i][2] < rx_min[2]
-                rx_min = rx_circ[i]
-            elseif rx_circ[i][2] > rx_max[2]
-                rx_max = rx_circ[i]
-            end
-        end
-
-        # Center point between rx and tx
-        fwdaz, _, dist, _ = inverse(tx.longitude, tx.latitude, rx.longitude, rx.latitude)
-        center = forward(tx.longitude, tx.latitude, fwdaz, dist/2)
-
-        midpt1 = forward(center.lon, center.lat, fwdaz+90, halfwidth)
-        midpt2 = forward(center.lon, center.lat, fwdaz-90, halfwidth)
-        if midpt1.lat > midpt2.lat
-            uppermidpt = midpt1
-            lowermidpt = midpt2
-        else
-            uppermidpt = midpt2
-            lowermidpt = midpt1
-        end
-
-        # Great circle paths from rx_max to center to tx_max and rx_min to center to tx_min
-        upper_gcp_rx = waypoints(GeodesicLine(rx_max...; lon2=uppermidpt.lon, lat2=uppermidpt.lat);
-            n=100)
-        upper_gcp_tx = waypoints(GeodesicLine(uppermidpt.lon, uppermidpt.lat; lon2=tx_max[1], lat2=tx_max[2]);
-            n=100)
-        lower_gcp_rx = waypoints(GeodesicLine(rx_min...; lon2=lowermidpt.lon, lat2=lowermidpt.lat);
-            n=100)
-        lower_gcp_tx = waypoints(GeodesicLine(lowermidpt.lon, lowermidpt.lat; lon2=tx_min[1], lat2=tx_min[2]);
-            n=100)
-
-        allpts = [
-            [[pt[1], pt[2]] for pt in tx_circ];
-            [[pt[1], pt[2]] for pt in rx_circ];
-            [[pt.lon, pt.lat] for pt in upper_gcp_rx];
-            [[pt.lon, pt.lat] for pt in upper_gcp_tx];
-            [[pt.lon, pt.lat] for pt in lower_gcp_rx];
-            [[pt.lon, pt.lat] for pt in lower_gcp_tx]
-        ]
-        diamond = LibGEOS.convexhull(LibGEOS.MultiPoint(allpts))
-
-        # This sets to 1 if the gridcell is within the diamond at all and 0 otherwise
-        for l in axes(lonlats,2)
-            pt = LibGEOS.Point(lonlats[1,l], lonlats[2,l])
-            localization[l,p] = LibGEOS.intersects(pt, diamond) ? 1 : 0
-        end
-
-        # push!(diamonds, diamond)
-        push!(diamonds, LibGEOS.coordinates(LibGEOS.boundary(diamond)))
-    end
-
-    return localization, diamonds
-end
-
-"""
     pathname(p)
 
 Return path name string for (transmitter, receiver) path tuple `p`.
@@ -220,3 +33,99 @@ Remove named dims and axis keys from `m`, returning a view of the underlying arr
 """
 Base.strip(m::KeyedArray) = AxisKeys.keyless(AxisKeys.unname(m))
 Base.strip(m::NamedDimsArray) = AxisKeys.unname(m)
+
+"""
+l2norm(r)
+
+Compute the *squared* L2 norm, ``||r||₂² = r₁² + r₂² + … + rₙ²``.
+
+This would normalize the sum of squared residuals, which is what oocurs in the least squares
+problem.
+"""
+function l2norm(r)
+    return sum(abs2, r)
+end
+
+"""
+l1norm(r)
+
+Compute the L1 norm ``||r||₁ = |r₁| + |r₂| + … + |r₃|``.
+"""
+function l1norm(r)
+    return sum(abs, r)
+end
+
+"""
+hubernorm(r, ϵ)
+
+Compute the Huber norm, which is the L2 norm squared between `-ϵ` and `ϵ` and the L1 norm
+outside these bounds.
+
+Guitton and Symes 2003 Robust inversion...
+"""
+function huber(r, ϵ)
+    M(x, ϵ) = abs(x) <= ϵ ? x^2/(2*ϵ) : abs(x) - ϵ/2
+
+    return sum(x->M(x, ϵ), r)
+end
+
+"""
+tikhonov_gradient(m, mp, λh, λb)
+
+Compute Tikhonov regularization of the gradient of model `m` with ``h′`` scaled by `λh` and
+``β`` by `λb`.
+"""
+function tikhonov_gradient(m, mp, λh, λb)
+    mp = ModelParams(mp.pathstep, 100e3, mp.r)
+    _, _, h_grid, b_grid = dense_grid(m, mp)
+
+    h_gy, h_gx = diff(h_grid; dims=1), diff(h_grid; dims=2)
+    b_gy, b_gx = diff(b_grid; dims=1), diff(b_grid; dims=2)
+
+    h_gy, h_gx = filter(!isnan, h_gy), filter(!isnan, h_gx)
+    b_gy, b_gx = filter(!isnan, b_gy), filter(!isnan, b_gx)
+
+    # Because diff behaves poorly at edges, let's use robust stats and remove a few outliers
+    # (not a significant problem with large Δ and we don't want to miss actually big diffs)
+    # for f in (h_gy, h_gx, b_gy, b_gx)
+    #     mi, ma = quantile(f, [0.05, 0.95])
+    #     filter!(x->mi < x < ma, f)
+    # end
+
+    return λh*(norm(h_gx, 2) + norm(h_gy, 2)) + λb*(norm(b_gx, 2) + norm(b_gy, 2))
+end
+
+"""
+totalvariation(m, mp, μh, μb, αh, αb)
+
+Compute total variation regularization of model `m` with regularization parameter `μ` and a
+small stabilization term `α` such that
+```
+J(m) = μ ||∇m||₁ = μ Σ √( mx² + my² + α² )
+```
+"""
+function totalvariation(itp, m, μh, μb, αh, αb)
+    # mp = ModelParams(mp.pathstep, 100e3, mp.r, mp.w)  # `mp.w` is constrained by Δ of initial `mp`
+    _, _, h_grid, b_grid = dense_grid(m, mp)
+
+
+
+
+    h_gy, h_gx = diff(h_grid; dims=1), diff(h_grid; dims=2)
+    b_gy, b_gx = diff(b_grid; dims=1), diff(b_grid; dims=2)
+
+    h_gy, h_gx = filter(!isnan, h_gy), filter(!isnan, h_gx)
+    b_gy, b_gx = filter(!isnan, b_gy), filter(!isnan, b_gx)
+
+    αh² = αh^2
+    αb² = αb^2
+
+    h_total = 0.0
+    b_total = 0.0
+    for i in eachindex(h_gy)
+        h_total += sqrt(h_gy[i]^2 + h_gx[i]^2 + αh²)
+        b_total += sqrt(b_gy[i]^2 + b_gx[i]^2 + αb²)
+    end
+
+    return μh*h_total + μb*b_total
+end

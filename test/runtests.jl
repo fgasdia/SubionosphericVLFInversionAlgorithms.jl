@@ -1,4 +1,4 @@
-using Test, Random, DelimitedFiles, Dates
+using Test, Random, DelimitedFiles, Dates, LinearAlgebra
 using AxisKeys, Distributions, Proj4
 using ScatteredInterpolation, GeoStats
 using LongwaveModePropagator
@@ -15,100 +15,22 @@ include("utils.jl")
 include("simulatedannealing.jl")
 include("kalmanfilter.jl")
 
-function test_models()
-    x, paths, dt = testscenario()
-    tx, rx = only(paths)
-    hprimes, betas = strip(x(:h)), strip(x(:b))
-    
-    xygrid = SIA.build_xygrid(x)
+function testscenario(dr=500e3)
+    dt = DateTime(2019, 2, 15, 18, 30)
+    tx = TRANSMITTER[:NAA]
+    rx = Receiver("Boulder", 40.02, -105.27, 0.0, VerticalDipole())
+    paths = [(tx, rx)]
 
-    # ## ScatteredInterpolant
-    itp = ScatteredInterpolant(ThinPlate(), esri_102010())
+    west, east = -109.5, -63
+    south, north = 36.5, 48.3
+    x_grid, y_grid = build_xygrid(west, east, south, north, wgs84(), esri_102010(); dr)
 
-    hitp = ScatteredInterpolation.interpolate(itp.method, xygrid, vec(hprimes))
-    bitp = ScatteredInterpolation.interpolate(itp.method, xygrid, vec(betas))
-    input = SIA.model_observation(itp, hitp, bitp, tx, rx, dt)
+    x = KeyedArray(fill(NaN, 2, length(y_grid), length(x_grid)); field=[:h, :b], y=y_grid, x=x_grid)
+    x(:h) .= 70.0
+    x(:b) .= 0.4
 
-    # Make sure fields are filled in appropriately
-    @test all(x->isapprox(x, 70, atol=0.1), input.hprimes)
-    @test all(x->isapprox(x, 0.4, atol=0.01), input.betas)
-    @test input.frequency == 24e3
-    @test range(tx, rx) < input.output_ranges[end] < 2*range(tx, rx)
-    @test all(0 .< input.ground_epsrs .<= 81)
-
-    a, p = model(itp, x, paths, dt; lwpc=false, pathstep=500e3)
-    @test length(a) == length(p) == 1
-    @test abs(only(p)) <= 2π
-
-    if Sys.iswindows() && isfile("C:\\LWPCv21\\lwpm.exe")
-        al, pl = model(itp, x, paths, dt; lwpc=true, pathstep=500e3)
-        @test length(al) == length(pl) == 1
-        @test abs(only(pl)) <= 2π
-        @test rad2deg(abs(only(p - pl))) < 1
-        @test abs(only(a - al)) < 1
-    else
-        @info " Skipping LWPC"
-    end
-
-    # ## GeoStatsInterpolant
-    coords = reinterpret(reshape, Tuple{Float64,Float64}, xygrid)  # requires Julia v1.6
-    τ = 2e-7*500e3
-    f(h) = exp(-h^2/(2*τ^2))
-    solver = LWR(
-        :h′ => (weightfun=f,),
-        :β => (weightfun=f,)
-    )
-    itp = GeoStatsInterpolant(solver, esri_102010(), coords)
-
-    geox = georef((h′=hprimes, β=betas), PointSet(itp.coords))
-    input = SIA.model_observation(itp, geox, tx, rx, dt)
-
-    # Make sure fields are filled in appropriately
-    @test all(input.hprimes .≈ 70)
-    @test all(input.betas .≈ 0.4)
-    @test input.frequency == 24e3
-    @test range(tx, rx) < input.output_ranges[end] < 2*range(tx, rx)
-    @test all(0 .< input.ground_epsrs .<= 81)
-
-    a, p = model(itp, x, paths, dt; lwpc=false, pathstep=500e3)
-    @test length(a) == length(p) == 1
-    @test abs(only(p)) <= 2π
-
-    if Sys.iswindows() && isfile("C:\\LWPCv21\\lwpm.exe")
-        al, pl = model(itp, x, paths, dt; lwpc=true, pathstep=500e3)
-        @test length(al) == length(pl) == 1
-        @test abs(only(pl)) <= 2π
-        @test rad2deg(abs(only(p - pl))) < 1
-        @test abs(only(a - al)) < 1
-    else
-        @info " Skipping LWPC"
-    end
-
-    # ## hbfcn
-    hbfcn(lo, la, dt) = ferguson(la, zenithangle(la, lo, dt), dt)
-    input = SIA.model_observation(hbfcn, tx, rx, dt)
-
-    @test all(x->isapprox(x, 73, atol=1), input.hprimes)
-    @test all(x->isapprox(x, 0.3, atol=0.1), input.betas)
-    @test input.frequency == 24e3
-    @test range(tx, rx) < input.output_ranges[end] < 2*range(tx, rx)
-    @test all(0 .< input.ground_epsrs .<= 81)
-
-    a, p = model(hbfcn, paths, dt; lwpc=false, pathstep=500e3)
-    @test length(a) == length(p) == 1
-    @test abs(only(p)) <= 2π
-
-    if Sys.iswindows() && isfile("C:\\LWPCv21\\lwpm.exe")
-        al, pl = model(hbfcn, paths, dt; lwpc=true, pathstep=500e3)
-        @test length(al) == length(pl) == 1
-        @test abs(only(pl)) <= 2π
-        @test rad2deg(abs(only(p - pl))) < 1
-        @test abs(only(a - al)) < 1
-    else
-        @info " Skipping LWPC"
-    end
+    return x, paths, dt
 end
-
 
 @testset "SubionosphericVLFInversionAlgorithms" begin
     @info "Testing SubionosphericVLFInversionAlgorithms"
@@ -124,6 +46,11 @@ end
         @info "Testing forward models"
         @info " This may take a minute..."
         test_models()
+    end
+
+    @testset "Localization and grids" begin
+        @info "Testing localization and grids"
+        test_grids()
     end
 
     @testset "Kalman filter" begin
