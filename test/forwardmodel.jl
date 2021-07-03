@@ -3,7 +3,7 @@ function test_models()
     tx, rx = only(paths)
     hprimes, betas = strip(x(:h)), strip(x(:b))
     
-    xygrid = build_xygrid(x)
+    xygrid = build_xygrid(x(:h))
 
     # ## ScatteredInterpolant
     itp = ScatteredInterpolant(ThinPlate(), esri_102010(), xygrid)

@@ -70,14 +70,24 @@ function huber(r, ϵ)
 end
 
 """
-tikhonov_gradient(m, mp, λh, λb)
+tikhonov_gradient(itp, m, λh, λb; localizationfcn=nothing, step=100e3)
 
 Compute Tikhonov regularization of the gradient of model `m` with ``h′`` scaled by `λh` and
 ``β`` by `λb`.
 """
-function tikhonov_gradient(m, mp, λh, λb)
-    mp = ModelParams(mp.pathstep, 100e3, mp.r)
-    _, _, h_grid, b_grid = dense_grid(m, mp)
+function tikhonov_gradient(itp, m, λh, λb; localizationfcn=nothing, step=100e3)
+    xgrid = range(extrema(m.x)...; step)
+    ygrid = range(extrema(m.y)...; step)
+
+    h_grid = dense_grid(itp, m(:h), xgrid, ygrid)
+    b_grid = dense_grid(itp, m(:b), xgrid, ygrid)
+
+    if !isnothing(localizationfcn)
+        lonlats = transform(itp.projection, wgs84(), permutedims(densify(xgrid, ygrid)))
+        localization = localizationfcn(permutedims(lonlats))
+        h_grid[.!localization] .= NaN
+        b_grid[.!localization] .= NaN
+    end
 
     h_gy, h_gx = diff(h_grid; dims=1), diff(h_grid; dims=2)
     b_gy, b_gx = diff(b_grid; dims=1), diff(b_grid; dims=2)
@@ -85,31 +95,37 @@ function tikhonov_gradient(m, mp, λh, λb)
     h_gy, h_gx = filter(!isnan, h_gy), filter(!isnan, h_gx)
     b_gy, b_gx = filter(!isnan, b_gy), filter(!isnan, b_gx)
 
-    # Because diff behaves poorly at edges, let's use robust stats and remove a few outliers
-    # (not a significant problem with large Δ and we don't want to miss actually big diffs)
-    # for f in (h_gy, h_gx, b_gy, b_gx)
-    #     mi, ma = quantile(f, [0.05, 0.95])
-    #     filter!(x->mi < x < ma, f)
-    # end
-
     return λh*(norm(h_gx, 2) + norm(h_gy, 2)) + λb*(norm(b_gx, 2) + norm(b_gy, 2))
 end
 
 """
-totalvariation(m, mp, μh, μb, αh, αb)
+totalvariation(itp, m, μh, μb, αh, αb; localizationfcn=nothing, step=100e3)
 
 Compute total variation regularization of model `m` with regularization parameter `μ` and a
 small stabilization term `α` such that
 ```
 J(m) = μ ||∇m||₁ = μ Σ √( mx² + my² + α² )
 ```
+
+The optional `localizationfcn` should be a function of `lonlats` that returns a `Bool` mask
+that identifies which states are localized.
+
+`step` is the step size in the fine grid on which the states are interpolated before
+computing the gradient.
 """
-function totalvariation(itp, m, μh, μb, αh, αb)
-    # mp = ModelParams(mp.pathstep, 100e3, mp.r, mp.w)  # `mp.w` is constrained by Δ of initial `mp`
-    _, _, h_grid, b_grid = dense_grid(m, mp)
+function totalvariation(itp, m, μh, μb, αh, αb; localizationfcn=nothing, step=100e3)
+    xgrid = range(extrema(m.x)...; step)
+    ygrid = range(extrema(m.y)...; step)
 
+    h_grid = dense_grid(itp, m(:h), xgrid, ygrid)
+    b_grid = dense_grid(itp, m(:b), xgrid, ygrid)
 
-
+    if !isnothing(localizationfcn)
+        lonlats = transform(itp.projection, wgs84(), permutedims(densify(xgrid, ygrid)))
+        localization = localizationfcn(permutedims(lonlats))
+        h_grid[.!localization] .= NaN
+        b_grid[.!localization] .= NaN
+    end
 
     h_gy, h_gx = diff(h_grid; dims=1), diff(h_grid; dims=2)
     b_gy, b_gx = diff(b_grid; dims=1), diff(b_grid; dims=2)

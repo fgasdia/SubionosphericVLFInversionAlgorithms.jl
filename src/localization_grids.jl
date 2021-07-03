@@ -5,22 +5,22 @@ Grid-centric
 """
     build_xygrid(x)
 
-Return the 2 × n `Matrix` of `x.x` and `x.y` coordinates at which `x(:h)` is _not_ `NaN`.
+Return the 2 × n `Matrix` of `x.x` and `x.y` coordinates at which `x` is _not_ `NaN`.
 
 In practice, this function can be used to return the grid on which the control points
-are defined after localization has been applied to `x(:h)` by setting rejected entries to
-`NaN`.
+are defined after localization has been applied to `x` by setting rejected entries to
+`NaN`. `x` should only have named dimensions `x` and `y`, i.e. `x` passed to this function
+is `x(:h)(t=0)(ens=1)`.
 
 See also: [`densify`](@ref)
 """
 function build_xygrid(x)
-    hprimes = x(:h)
     gridshape = (length(x.y), length(x.x))
-    xygrid = Matrix{Float64}(undef, 2, count(!isnan, hprimes))
+    xygrid = Matrix{Float64}(undef, 2, count(!isnan, x))
     CI = CartesianIndices(gridshape)
     idx = 1
-    for i in eachindex(hprimes)
-        if !isnan(hprimes[i])
+    for i in eachindex(x)
+        if !isnan(x[i])
             xygrid[:,idx] .= (x.x[CI[i][2]], x.y[CI[i][1]])
             idx += 1
         end
@@ -363,15 +363,14 @@ function obs2grid_distance(lonlats, paths; r=200e3, pathstep=100e3)
 end
 
 """
-    localize_distance(lonlats, paths; r=200e3, pathstep=100e3)
+    anylocal(localization)
 
-Convenience function that returns a `Vector{Bool}` of whether or not each element of `lonlats`
-is within distance `r` in meters from any of `paths`.
+Convenience function that returns a `Vector{Bool}` of whether or not there is any
+localization in any path for a matrix `localization` of size `(ngrid, npaths)`.
 
-See also: [`obs2grid_distance`](@ref)
+See also: [`obs2grid_distance`](@ref), [`obs2grid_diamondpill`](@ref)
 """
-function localize_distance(lonlats, paths; r=200e3, pathstep=100e3)
-    localization = obs2grid_distance(lonlats, paths; r, pathstep)
+function anylocal(localization)
     localize = trues(size(localization,1))
     for i in axes(localization,1)
         # Check if not a single path affects gridcell i
@@ -380,4 +379,20 @@ function localize_distance(lonlats, paths; r=200e3, pathstep=100e3)
         end
     end
     return localize
+end
+
+"""
+    mediandr(lola)
+
+Return the median WGS84 distance in meters between dense matrix of longitude, latitude points
+in ``2 × n`` `lola`.
+"""
+function mediandr(lola)
+    dists = Vector{Float64}(undef, size(lola,2)÷2)
+    idx = 1
+    for i = 1:2:size(lola,2)-1
+        dists[idx] = inverse(lola[1,i],lola[2,i],lola[1,i+1],lola[2,i+1]).dist
+        idx += 1
+    end
+    return median(dists)
 end

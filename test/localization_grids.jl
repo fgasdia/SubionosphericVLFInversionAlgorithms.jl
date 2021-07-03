@@ -5,7 +5,8 @@ function test_grids()
     west, east = -109.5, -63
     south, north = 36.5, 48.3
     
-    x_grid, y_grid = build_xygrid(west, east, south, north, wgs84(), esri_102010(); dr=500e3)
+    dr = 500e3
+    x_grid, y_grid = build_xygrid(west, east, south, north, wgs84(), esri_102010(); dr)
     @test x_grid isa AbstractRange
     @test y_grid isa AbstractRange
     @test x_grid == x.x && y_grid == x.y  # to make sure bounds match
@@ -13,7 +14,7 @@ function test_grids()
     xy_grid = densify(x_grid, y_grid)
     @test size(xy_grid) == (2, length(x_grid)*length(y_grid))
 
-    @test xy_grid == build_xygrid(x)
+    @test xy_grid == build_xygrid(x(:h))
 
     itp = ScatteredInterpolant(ThinPlate(), esri_102010(), xy_grid)
     hgrid = dense_grid(itp, x(:h), x_grid, y_grid)
@@ -44,6 +45,10 @@ function test_grids()
     distarr = lonlatgrid_dists(lola)
     @test size(distarr) == (size(lola,2), size(lola,2))
     @test iszero(diag(distarr))
+
+    mdr = mediandr(lola)
+    @test dr != mdr
+    @test dr ≈ mdr atol=1e3
 
     c = 2000e3
     gc = gaspari1999_410(distarr, c)
