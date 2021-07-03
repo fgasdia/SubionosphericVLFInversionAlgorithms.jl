@@ -3,7 +3,8 @@ function test_totalvariation()
     
     xygrid = build_xygrid(x(:h))
 
-    τ = 2e-7*500e3
+    lengthscale = 500e3
+    τ = 2e-7*lengthscale
     f(h) = exp(-h^2/(2*τ^2))
     solver = LWR(
         :h′ => (weightfun=f,),
@@ -11,7 +12,7 @@ function test_totalvariation()
     )
     itp = GeoStatsInterpolant(solver, esri_102010(), xygrid)
 
-    localizationfcn(lola) = anylocal(obs2grid_distance(lola, paths; r=200e3))
+    localizationfcn(lola) = anylocal(obs2grid_distance(lola, paths; r=lengthscale))
 
     μh, μb = 1, 1
     αh, αb = 0, 0
@@ -25,6 +26,8 @@ function test_totalvariation()
     xc(:b) .= rand(size(xc(:b))...)
     ϕ = totalvariation(itp, xc, μh, μb, αh, αb; localizationfcn)
     @test ϕ > 0
+    ϕv = totalvariation(itp, [vec(xc(:h)); vec(xc(:b))], μh, μb, αh, αb; localizationfcn)
+    @test ϕv ≈ ϕ
     ϕ2 = totalvariation(itp, xc, μh, μb, αh, αb; localizationfcn=nothing)
     @test ϕ2 > 0
     @test !isapprox(ϕ, ϕ2; atol=0.1)
@@ -35,7 +38,8 @@ function test_tikhonov()
     
     xygrid = build_xygrid(x(:h))
 
-    τ = 2e-7*500e3
+    lengthscale = 500e3
+    τ = 2e-7*lengthscale
     f(h) = exp(-h^2/(2*τ^2))
     solver = LWR(
         :h′ => (weightfun=f,),
@@ -43,7 +47,7 @@ function test_tikhonov()
     )
     itp = GeoStatsInterpolant(solver, esri_102010(), xygrid)
 
-    localizationfcn(lola) = anylocal(obs2grid_distance(lola, paths; r=200e3))
+    localizationfcn(lola) = anylocal(obs2grid_distance(lola, paths; r=lengthscale))
 
     λh, λb = 1, 1
     ϕ = tikhonov_gradient(itp, x, λh, λb; localizationfcn)

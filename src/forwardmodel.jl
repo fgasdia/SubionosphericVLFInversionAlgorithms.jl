@@ -166,14 +166,17 @@ end
 Return the model observations `(amps, phases)` for spatial interpolation method `itp` and
 `datetime`.
 
+If `x` is a `KeyedArray`, then it is transformed to a vector where the first half is ``h′``
+and the second half is ``β``.
+
 Uses LWPC as the forward model if `lwpc` is true; otherwise, uses LongwaveModePropagator.jl.
 """
 function model(itp::GeoStatsInterpolant, x, paths, datetime; pathstep=100e3, lwpc=true)
-    hprimes = x(:h)
-    betas = x(:b)
+    npts = length(x) ÷ 2
+    hprimes = x[1:npts]
+    betas = x[npts+1:end]
 
-    pts = PointSet(itp.coords)
-    geox = georef((h′=vec(hprimes), β=vec(betas)), pts)
+    geox = georef((h′=filter(!isnan, hprimes), β=filter(!isnan, betas)), PointSet(itp.coords))
 
     batch = BatchInput{ExponentialInput}()
     batch.name = "estimate"
@@ -211,6 +214,8 @@ function model(itp::GeoStatsInterpolant, x, paths, datetime; pathstep=100e3, lwp
 
     return amps, phases
 end
+model(itp::GeoStatsInterpolant, x::KeyedArray, paths, datetime; pathstep=100e3, lwpc=true) =
+    model(itp, [vec(x(:h)); vec(x(:b))], paths, datetime; pathstep, lwpc)
 
 function model(itp::ScatteredInterpolant, x, paths, datetime; pathstep=100e3, lwpc=true)
     hprimes = x(:h)

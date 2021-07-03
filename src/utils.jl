@@ -35,7 +35,7 @@ Base.strip(m::KeyedArray) = AxisKeys.keyless(AxisKeys.unname(m))
 Base.strip(m::NamedDimsArray) = AxisKeys.unname(m)
 
 """
-l2norm(r)
+    l2norm(r)
 
 Compute the *squared* L2 norm, ``||r||₂² = r₁² + r₂² + … + rₙ²``.
 
@@ -47,7 +47,7 @@ function l2norm(r)
 end
 
 """
-l1norm(r)
+    l1norm(r)
 
 Compute the L1 norm ``||r||₁ = |r₁| + |r₂| + … + |r₃|``.
 """
@@ -56,7 +56,7 @@ function l1norm(r)
 end
 
 """
-hubernorm(r, ϵ)
+    hubernorm(r, ϵ)
 
 Compute the Huber norm, which is the L2 norm squared between `-ϵ` and `ϵ` and the L1 norm
 outside these bounds.
@@ -70,17 +70,23 @@ function huber(r, ϵ)
 end
 
 """
-tikhonov_gradient(itp, m, λh, λb; localizationfcn=nothing, step=100e3)
+    tikhonov_gradient(itp, m, λh, λb; localizationfcn=nothing, step=100e3)
 
 Compute Tikhonov regularization of the gradient of model `m` with ``h′`` scaled by `λh` and
 ``β`` by `λb`.
+
+If `m` is a `KeyedArray`, then it is transformed to a vector where the first half is ``h′``
+and the second half is ``β``.
 """
 function tikhonov_gradient(itp, m, λh, λb; localizationfcn=nothing, step=100e3)
-    xgrid = range(extrema(m.x)...; step)
-    ygrid = range(extrema(m.y)...; step)
+    (minx, maxx), (miny, maxy) = extrema(itp.coords; dims=2)
+    xgrid = range(minx, maxx; step)
+    ygrid = range(miny, maxy; step)
 
-    h_grid = dense_grid(itp, m(:h), xgrid, ygrid)
-    b_grid = dense_grid(itp, m(:b), xgrid, ygrid)
+    npts = size(itp.coords, 2)
+
+    h_grid = dense_grid(itp, m[1:npts], xgrid, ygrid)
+    b_grid = dense_grid(itp, m[npts+1:end], xgrid, ygrid)
 
     if !isnothing(localizationfcn)
         lonlats = transform(itp.projection, wgs84(), permutedims(densify(xgrid, ygrid)))
@@ -97,9 +103,11 @@ function tikhonov_gradient(itp, m, λh, λb; localizationfcn=nothing, step=100e3
 
     return λh*(norm(h_gx, 2) + norm(h_gy, 2)) + λb*(norm(b_gx, 2) + norm(b_gy, 2))
 end
+tikhonov_gradient(itp, m::KeyedArray, λh, λb; localizationfcn=nothing, step=100e3) =
+    tikhonov_gradient(itp, [vec(m(:h)); vec(m(:b))], λh, λb; localizationfcn, step)
 
 """
-totalvariation(itp, m, μh, μb, αh, αb; localizationfcn=nothing, step=100e3)
+    totalvariation(itp, m, μh, μb, αh, αb; localizationfcn=nothing, step=100e3)
 
 Compute total variation regularization of model `m` with regularization parameter `μ` and a
 small stabilization term `α` such that
@@ -114,11 +122,14 @@ that identifies which states are localized.
 computing the gradient.
 """
 function totalvariation(itp, m, μh, μb, αh, αb; localizationfcn=nothing, step=100e3)
-    xgrid = range(extrema(m.x)...; step)
-    ygrid = range(extrema(m.y)...; step)
+    (minx, maxx), (miny, maxy) = extrema(itp.coords; dims=2)
+    xgrid = range(minx, maxx; step)
+    ygrid = range(miny, maxy; step)
 
-    h_grid = dense_grid(itp, m(:h), xgrid, ygrid)
-    b_grid = dense_grid(itp, m(:b), xgrid, ygrid)
+    npts = size(itp.coords, 2)
+
+    h_grid = dense_grid(itp, m[1:npts], xgrid, ygrid)
+    b_grid = dense_grid(itp, m[npts+1:end], xgrid, ygrid)
 
     if !isnothing(localizationfcn)
         lonlats = transform(itp.projection, wgs84(), permutedims(densify(xgrid, ygrid)))
@@ -145,3 +156,5 @@ function totalvariation(itp, m, μh, μb, αh, αb; localizationfcn=nothing, ste
 
     return μh*h_total + μb*b_total
 end
+totalvariation(itp, m::KeyedArray, μh, μb, αh, αb; localizationfcn=nothing, step=100e3) =
+    totalvariation(itp, [vec(m(:h)); vec(m(:b))], μh, μb, αh, αb; localizationfcn, step)

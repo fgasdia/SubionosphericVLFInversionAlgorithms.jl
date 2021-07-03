@@ -55,8 +55,8 @@ function letkf_setup(scenario)
         overshoot=sqrt(2)*dr*modelscale, halfwidth=lengthscale/2)
     locmask = anylocal(localization)
 
-    h_init[CI[locmask],:] .= NaN
-    b_init[CI[locmask],:] .= NaN
+    h_init[CI[.!locmask],:] .= NaN
+    b_init[CI[.!locmask],:] .= NaN
 
     x(:h)(t=0) .= h_init
     x(:b)(t=0) .= b_init
@@ -118,7 +118,6 @@ function test_letkf(scenario)
     for i = 1:ntimes
         xa = LETKF_measupdate(x->H(x,i-1), x(t=i-1), y(t=i), R;
             ρ=1.1, localization, datatypes=(:amp, :phase))
-        @test !isnothing(xa)
         @test all(x->abs(x)<120, ym(t=i-1)(:amp))
         @test all(x->abs(x)<4π, ym(t=i-1)(:phase))
         x(t=i) .= xa
@@ -128,7 +127,6 @@ function test_letkf(scenario)
     for i = 1:ntimes
         xa = LETKF_measupdate(x->H(x,i-1), x(t=i-1), y(t=i), R[1:npaths];
             ρ=1.1, localization, datatypes=(:amp,))
-        @test !isnothing(xa)
         @test all(x->abs(x)<120, ym(t=i-1)(:amp))
         x(t=i) .= xa
     end
@@ -137,7 +135,6 @@ function test_letkf(scenario)
     for i = 1:ntimes
         xa = LETKF_measupdate(x->H(x,i-1), x(t=i-1), y(t=i), R[npaths+1:end];
             ρ=1.1, localization, datatypes=(:phase,))
-        @test !isnothing(xa)
         @test all(x->abs(x)<4π, ym(t=i-1)(:phase))
         x(t=i) .= xa
     end

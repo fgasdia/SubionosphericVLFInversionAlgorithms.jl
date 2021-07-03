@@ -81,7 +81,7 @@ function dense_grid(itp::ScatteredInterpolant, values, x_grid, y_grid)
 end
 
 function dense_grid(itp::GeoStatsInterpolant, values, x_grid, y_grid)
-    geox = georef((v=vec(values),), PointSet(itp.coords))
+    geox = georef((v=filter(!isnan, values),), PointSet(itp.coords))
 
     xy_grid = densify(x_grid, y_grid)
 

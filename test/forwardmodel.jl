@@ -56,6 +56,10 @@ function test_models()
     @test length(a) == length(p) == 1
     @test abs(only(p)) <= 2π
 
+    av, pv = model(itp, [vec(x(:h)); vec(x(:b))], paths, dt; lwpc=false, pathstep=500e3)
+    @test av ≈ a atol=1e-2
+    @test pv ≈ p atol=1e-2
+
     if Sys.iswindows() && isfile("C:\\LWPCv21\\lwpm.exe")
         al, pl = model(itp, x, paths, dt; lwpc=true, pathstep=500e3)
         @test length(al) == length(pl) == 1

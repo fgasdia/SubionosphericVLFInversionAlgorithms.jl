@@ -3,6 +3,7 @@ module SubionosphericVLFInversionAlgorithms
 using Random, Statistics, LinearAlgebra, Dates
 using StaticArrays, AxisKeys, Distributions
 using GeographicLib, LibGEOS, Proj4
+using NLopt
 using ScatteredInterpolation, GeoStats, Interpolations
 using LongwaveModePropagator
 const LMP = LongwaveModePropagator
@@ -10,13 +11,13 @@ using ProgressMeter
 
 using LMPTools, PropagationModelPrep
 
-export vfsa, LETKF_measupdate
+export vfsa, LETKF_measupdate, nlopt_estimate
 export model, ensemble_model!, ScatteredInterpolant, GeoStatsInterpolant
 export wgs84, esri_102010
-export gaspari1999_410, lonlatgrid_dists, obs2grid_diamondpill, obs2grid_distance, anylocal
-export modgaussian, build_xygrid, pathname, densify, gaussianstddev, compactlengthscale
-export dense_grid, mediandr
-export totalvariation, tikhonov_gradient
+export gaspari1999_410, lonlatgrid_dists, obs2grid_diamondpill, obs2grid_distance, anylocal,
+    modgaussian, build_xygrid, pathname, densify, gaussianstddev, compactlengthscale,
+    dense_grid, mediandr
+export totalvariation, tikhonov_gradient, l2norm, objective
 
 const RNG = MersenneTwister(1234)
 
@@ -33,5 +34,6 @@ include("localization_grids.jl")
 
 include("simulatedannealing.jl")
 include("kalmanfilter.jl")
+include("nlopt.jl")
 
 end # module
