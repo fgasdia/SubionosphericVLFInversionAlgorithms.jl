@@ -66,6 +66,11 @@ end
 
 Interpolate `values` over dense `x_grid`, `y_grid` in `itp.projection` and return a matrix
 of size `(length(y_grid), length(x_grid))`.
+
+!!! note
+
+    For `itp.method` that specifies a field (common with `GeoStatsInterpolant`), the field
+    should be `:v` when `itp` is passed to this function.
 """
 function dense_grid(itp::ScatteredInterpolant, values, x_grid, y_grid)
     vitp = ScatteredInterpolation.interpolate(itp.method, itp.coords, filter(!isnan, values))
@@ -81,6 +86,9 @@ function dense_grid(itp::ScatteredInterpolant, values, x_grid, y_grid)
 end
 
 function dense_grid(itp::GeoStatsInterpolant, values, x_grid, y_grid)
+    :v in itp.method.varnames ||
+        throw(ArgumentError("`itp.method` should be defined for variable `:v` when passed to `dense_grid`."))
+
     geox = georef((v=filter(!isnan, values),), PointSet(itp.coords))
 
     xy_grid = densify(x_grid, y_grid)

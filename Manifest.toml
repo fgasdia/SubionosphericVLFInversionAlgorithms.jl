@@ -253,9 +253,9 @@ version = "0.3.9"
 
 [[DiffEqBase]]
 deps = ["ArrayInterface", "ChainRulesCore", "DataStructures", "DocStringExtensions", "FastBroadcast", "FunctionWrappers", "IterativeSolvers", "LabelledArrays", "LinearAlgebra", "Logging", "MuladdMacro", "NonlinearSolve", "Parameters", "Printf", "RecursiveArrayTools", "RecursiveFactorization", "Reexport", "Requires", "SciMLBase", "Setfield", "SparseArrays", "StaticArrays", "Statistics", "SuiteSparse", "ZygoteRules"]
-git-tree-sha1 = "cfd2c4f9357ade5db4a52041b1b2c97641aeb19c"
+git-tree-sha1 = "932153f62d0508e59733e0fc33361470d293a889"
 uuid = "2b5f629d-d688-5b77-993f-72d75c75574e"
-version = "6.68.0"
+version = "6.68.1"
 
 [[DiffEqCallbacks]]
 deps = ["DataStructures", "DiffEqBase", "ForwardDiff", "LinearAlgebra", "NLsolve", "OrdinaryDiffEq", "RecipesBase", "RecursiveArrayTools", "StaticArrays"]
@@ -271,9 +271,9 @@ version = "1.0.3"
 
 [[DiffRules]]
 deps = ["NaNMath", "Random", "SpecialFunctions"]
-git-tree-sha1 = "214c3fcac57755cfda163d91c58893a8723f93e9"
+git-tree-sha1 = "85d2d9e2524da988bffaf2a381864e20d2dae08d"
 uuid = "b552c78f-8df3-52c6-915a-8e097449b14b"
-version = "1.0.2"
+version = "1.2.1"
 
 [[Distances]]
 deps = ["LinearAlgebra", "Statistics", "StatsAPI"]
@@ -597,11 +597,11 @@ version = "0.7.5"
 
 [[LMPTools]]
 deps = ["Dates", "GeographicLib", "HDF5", "LongwaveModePropagator", "Rotations", "SatelliteToolbox", "StaticArrays"]
-git-tree-sha1 = "5b793b347be0be8627026f4a6c5e38d00253b70e"
+git-tree-sha1 = "dbdd283f6831bc201bdf91f39ed2774831f327ca"
 repo-rev = "main"
 repo-url = "https://github.com/fgasdia/LMPTools.jl"
 uuid = "9da4b389-a4e8-40b7-9cd7-952b7f4c5d81"
-version = "0.0.6"
+version = "0.0.7"
 
 [[LabelledArrays]]
 deps = ["ArrayInterface", "LinearAlgebra", "MacroTools", "StaticArrays"]
@@ -832,9 +832,9 @@ version = "0.3.5"
 
 [[NamedDims]]
 deps = ["AbstractFFTs", "LinearAlgebra", "Pkg", "Requires", "Statistics"]
-git-tree-sha1 = "572b7af3ee53328eec29392d3b133804925595a1"
+git-tree-sha1 = "52985b34519b12fd0dcebbe34e74b2dbe6d03183"
 uuid = "356022a1-0364-5f58-8944-0da4b18d706f"
-version = "0.2.34"
+version = "0.2.35"
 
 [[NearestNeighbors]]
 deps = ["Distances", "StaticArrays"]
@@ -887,9 +887,9 @@ version = "1.4.1"
 
 [[OrdinaryDiffEq]]
 deps = ["Adapt", "ArrayInterface", "DataStructures", "DiffEqBase", "DocStringExtensions", "ExponentialUtilities", "FastClosures", "FiniteDiff", "ForwardDiff", "LinearAlgebra", "Logging", "MacroTools", "MuladdMacro", "NLsolve", "Polyester", "RecursiveArrayTools", "Reexport", "SparseArrays", "SparseDiffTools", "StaticArrays", "UnPack"]
-git-tree-sha1 = "f865c198eb4041535c9d27e0835c5b59cdb759d4"
+git-tree-sha1 = "5f0bd5cefdf18257588a52e1528e749e4fa62e47"
 uuid = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
-version = "5.59.2"
+version = "5.59.3"
 
 [[PDMats]]
 deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
@@ -1127,9 +1127,9 @@ version = "0.3.5"
 
 [[SciMLBase]]
 deps = ["ArrayInterface", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Statistics", "Tables", "TreeViews"]
-git-tree-sha1 = "9e92c3e8f73f404bf1adec63fe075b73bcec3e1c"
+git-tree-sha1 = "45e6f0bdf4c7fc93e4368f42f52fd32ce12e9cf9"
 uuid = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-version = "1.15.0"
+version = "1.16.0"
 
 [[ScientificTypes]]
 git-tree-sha1 = "b4e89a674804025c4a5843e35e562910485690c2"
