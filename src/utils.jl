@@ -104,7 +104,7 @@ function tikhonov_gradient(itp, m, λh, λb; localizationfcn=nothing, step=100e3
     return λh*(norm(h_gx, 2) + norm(h_gy, 2)) + λb*(norm(b_gx, 2) + norm(b_gy, 2))
 end
 tikhonov_gradient(itp, m::KeyedArray, λh, λb; localizationfcn=nothing, step=100e3) =
-    tikhonov_gradient(itp, [vec(m(:h)); vec(m(:b))], λh, λb; localizationfcn, step)
+    tikhonov_gradient(itp, [filter(!isnan, m(:h)); filter(!isnan, m(:b))], λh, λb; localizationfcn, step)
 
 """
     totalvariation(itp, m, μh, μb, αh, αb; localizationfcn=nothing, step=100e3)
@@ -157,4 +157,4 @@ function totalvariation(itp, m, μh, μb, αh, αb; localizationfcn=nothing, ste
     return μh*h_total + μb*b_total
 end
 totalvariation(itp, m::KeyedArray, μh, μb, αh, αb; localizationfcn=nothing, step=100e3) =
-    totalvariation(itp, [vec(m(:h)); vec(m(:b))], μh, μb, αh, αb; localizationfcn, step)
+    totalvariation(itp, [filter(!isnan, m(:h)); filter(!isnan, m(:b))], μh, μb, αh, αb; localizationfcn, step)

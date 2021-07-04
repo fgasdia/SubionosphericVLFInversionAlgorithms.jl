@@ -86,9 +86,9 @@ end
 
 function test_letkf(scenario)
     if Sys.iswindows() && isfile("C:\\LWPCv21\\lwpm.exe")
-        @info "  Running LETKF with LWPC. This may take a while."
+        @info "    Running LETKF with LWPC. This may take a while (10+ mins)."
     else
-        @warn "  `test_letkf()` only runs on Windows with LWPC"
+        @warn "    `test_letkf()` only runs on Windows with LWPC"
         return
     end
 

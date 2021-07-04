@@ -51,20 +51,19 @@ function nlopt_setup(scenario)
     y(:amp) .= oa .+ σA.*randn(npaths)
     y(:phase) .= mod2pi.(op .+ σp.*randn(npaths))
 
-    return paths, x, y, dr, lengthscale
+    return paths, x, y, lengthscale
 end
 
 function test_nlopt(scenario)
     if Sys.iswindows() && isfile("C:\\LWPCv21\\lwpm.exe")
-        @info "  Running LETKF with LWPC. This may take a while."
+        @info "    Running NLopt with LWPC. This may take a while."
     else
-        @warn "  `test_letkf()` only runs on Windows with LWPC"
+        @warn "    `test_nlopt()` only runs on Windows with LWPC"
         return
     end
 
     @unpack pathstep, dt, modelproj = scenario()
-    paths, x, y, dr, lengthscale = nlopt_setup(scenario)
-    npaths = length(paths)
+    paths, x, y, lengthscale = nlopt_setup(scenario)
 
     # ## NLOpt-specific arguments
 
@@ -87,11 +86,11 @@ function test_nlopt(scenario)
 
     μh, μb = 1, 1
     αh, αb = 0, 0
-    ϕ(x) = totalvariation(itp, x, μh, μb, αh, αb; localizationfcn)
+    ϕ1(x) = totalvariation(itp, x, μh, μb, αh, αb; localizationfcn)
 
     # ## Objective function
     val = objective(itp, x, y, paths, dt;
-            ρ, ϕ, σamp, σphase, pathstep, datatypes=(:amp, :phase))
+            ρ, ϕ=ϕ1, σamp, σphase, pathstep, datatypes=(:amp, :phase))
 
     valwoϕ = objective(itp, x, y, paths, dt;
             ρ, ϕ=(x)->0, σamp, σphase, pathstep, datatypes=(:amp, :phase))
@@ -103,8 +102,15 @@ function test_nlopt(scenario)
 
     # ## nlopt_estimate
 
-    f(x, grad) = objective(itp, x, y, paths, dt;
-        ρ, ϕ, σamp, σphase, pathstep, datatypes=(:amp, :phase))
+    μh, μb = 10, 100
+    αh, αb = 1.0, 0.1
+    ϕ2(x) = totalvariation(itp, x, μh, μb, αh, αb; localizationfcn)
 
-    minf, xest, ret = nlopt_estimate(f, x; xmin=(65, 0.2), xmax=(90, 1.0), step=(2.0, 0.05), neval=10)
+    f(x, grad) = objective(itp, x, y, paths, dt;
+        ρ, ϕ=ϕ2, σamp, σphase, pathstep, datatypes=(:amp, :phase))
+
+    minf, xest, ret = nlopt_estimate(f, x;
+        xmin=(65, 0.2), xmax=(90, 1.0), step=(2.0, 0.05), neval=50)
+
+    @test minf < f(x, nothing)
 end

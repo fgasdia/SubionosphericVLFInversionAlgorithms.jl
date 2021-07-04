@@ -25,9 +25,21 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
+AxisKeys = "0.1"
+Distributions = "0.25"
+GeoStats = "0.25"
+GeographicLib = "0.4"
+Interpolations = "0.13"
+LMPTools = "0.0.5 - 0.0.6"
+LibGEOS = "0.6"
 LongwaveModePropagator = "0.3"
+NLopt = "0.6"
 ProgressMeter = "1.1"
+Proj4 = "0.7"
 PropagationModelPrep = "0.0.11"
+ScatteredInterpolation = "0.3"
+StaticArrays = "1"
+UnPack = "1"
 julia = "1.6"
 
 [extras]

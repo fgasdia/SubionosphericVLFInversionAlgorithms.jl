@@ -215,7 +215,7 @@ function model(itp::GeoStatsInterpolant, x, paths, datetime; pathstep=100e3, lwp
     return amps, phases
 end
 model(itp::GeoStatsInterpolant, x::KeyedArray, paths, datetime; pathstep=100e3, lwpc=true) =
-    model(itp, [vec(x(:h)); vec(x(:b))], paths, datetime; pathstep, lwpc)
+    model(itp, [filter(!isnan, x(:h)); filter(!isnan, x(:b))], paths, datetime; pathstep, lwpc)
 
 function model(itp::ScatteredInterpolant, x, paths, datetime; pathstep=100e3, lwpc=true)
     hprimes = x(:h)

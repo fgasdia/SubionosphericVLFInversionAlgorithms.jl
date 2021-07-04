@@ -17,6 +17,7 @@ include("forwardmodel.jl")
 include("localization_grids.jl")
 include("simulatedannealing.jl")
 include("kalmanfilter.jl")
+include("nlopt.jl")
 
 function testscenario(dr=500e3)
     dt = DateTime(2019, 2, 15, 18, 30)
@@ -94,7 +95,7 @@ end
 
     @testset "Forward models" begin
         @info "Testing forward models"
-        @info "  This may take a minute..."
+        @info "    This may take a minute..."
         test_models()
     end
 
@@ -106,6 +107,11 @@ end
     @testset "Kalman filter" begin
         @info "Testing Kalman filter"
         test_letkf(dayscenario)
+    end
+
+    @testset "NLopt" begin
+        @info "Testing NLopt"
+        test_nlopt(dayscenario)
     end
 
     @testset "Utils" begin

@@ -30,7 +30,7 @@ function test_models()
         @test rad2deg(abs(only(p - pl))) < 1
         @test abs(only(a - al)) < 1
     else
-        @info " Skipping LWPC"
+        @info "    Skipping LWPC"
     end
 
     # ## GeoStatsInterpolant
@@ -67,7 +67,7 @@ function test_models()
         @test rad2deg(abs(only(p - pl))) < 1
         @test abs(only(a - al)) < 1
     else
-        @info " Skipping LWPC"
+        @info "    Skipping LWPC"
     end
 
     # ## hbfcn
@@ -91,6 +91,6 @@ function test_models()
         @test rad2deg(abs(only(p - pl))) < 1
         @test abs(only(a - al)) < 1
     else
-        @info " Skipping LWPC"
+        @info "    Skipping LWPC"
     end
 end
