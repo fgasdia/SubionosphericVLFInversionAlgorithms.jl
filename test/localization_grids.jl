@@ -30,7 +30,8 @@ function test_grids()
     f(h) = exp(-h^2/(2*τ^2))
     solver = LWR(
         :h′ => (weightfun=f,),
-        :β => (weightfun=f,)
+        :β => (weightfun=f,),
+        :v => (weightfun=f,)
     )
     itp = GeoStatsInterpolant(solver, esri_102010(), xy_grid)
     hgrid = dense_grid(itp, x(:h), x_grid, y_grid)
@@ -60,6 +61,11 @@ function test_grids()
     localization, _ = obs2grid_diamondpill(lola, paths)
     @test size(localization) == (size(lola,2), length(paths))
     # heatmap(x_grid, y_grid, reshape(localization, (length(y_grid), length(x_grid))))
+
+    locmask = anylocal(localization)
+    x = KeyedArray(fill(1.0, length(y_grid), length(x_grid)); y=y_grid, x=x_grid)
+    x[.!locmask] .= NaN
+    @test build_xygrid(locmask, x_grid, y_grid) == build_xygrid(x)
 
     gcp_boundary, _ = SIA.boundary_coords(paths)
     @test gcp_boundary isa Vector  # sanity

@@ -38,7 +38,8 @@ function test_models()
     f(h) = exp(-h^2/(2*τ^2))
     solver = LWR(
         :h′ => (weightfun=f,),
-        :β => (weightfun=f,)
+        :β => (weightfun=f,),
+        :v => (weightfun=f,)
     )
     itp = GeoStatsInterpolant(solver, esri_102010(), xygrid)
 

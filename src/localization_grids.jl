@@ -29,6 +29,26 @@ function build_xygrid(x)
 end
 
 """
+    build_xygrid(mask, x_grid, y_grid)
+
+Return the 2 × n `Matrix` of entries of `x_grid` and `y_grid` coordinates at which the mask
+(usually from localization) is `true`.
+"""
+function build_xygrid(mask, x_grid, y_grid)
+    gridshape = (length(y_grid), length(x_grid))
+    xygrid = Matrix{Float64}(undef, 2, count(mask))
+    CI = CartesianIndices(gridshape)
+    idx = 1
+    for i in eachindex(mask)
+        if mask[i]
+            xygrid[:,idx] .= (x_grid[CI[i][2]], y_grid[CI[i][1]])
+            idx += 1
+        end
+    end
+    return xygrid
+end
+
+"""
     build_xygrid(west, east, south, north, fromproj=wgs84(), toproj=esri_102010(); dr=300e3)
 
 Return the `(x_grid, y_grid)` tuple of `StepRangeLen` in the `toproj` `Projection` from

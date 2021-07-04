@@ -73,7 +73,8 @@ function test_nlopt(scenario)
     τ = 2e-7*lengthscale
     solver = LWR(
         :h′ => (weightfun=h->exp(-h^2/(2*τ^2)),),
-        :β => (weightfun=h->exp(-h^2/(2*τ^2)),)
+        :β => (weightfun=h->exp(-h^2/(2*τ^2)),),
+        :v => (weightfun=h->exp(-h^2/(2*τ^2)),)
     )
 
     xygrid = build_xygrid(x(:h))
@@ -82,7 +83,7 @@ function test_nlopt(scenario)
     # Data and model penalty
     ρ = l2norm
 
-    localizationfcn(lola) = anylocal(obs2grid_distance(lola, paths; r=lengthscale))
+    localizationfcn(lola) = anylocal(obs2grid_distance(lola, paths; r=lengthscale/2))
 
     μh, μb = 1, 1
     αh, αb = 0, 0
