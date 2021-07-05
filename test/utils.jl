@@ -7,8 +7,8 @@ function test_totalvariation()
     τ = 2e-7*lengthscale
     f(h) = exp(-h^2/(2*τ^2))
     solver = LWR(
-        :h′ => (weightfun=f,),
-        :β => (weightfun=f,),
+        :h => (weightfun=f,),
+        :b => (weightfun=f,),
         :v => (weightfun=f,)
     )
     itp = GeoStatsInterpolant(solver, esri_102010(), xygrid)
@@ -43,8 +43,9 @@ function test_tikhonov()
     τ = 2e-7*lengthscale
     f(h) = exp(-h^2/(2*τ^2))
     solver = LWR(
-        :h′ => (weightfun=f,),
-        :β => (weightfun=f,)
+        :h => (weightfun=f,),
+        :b => (weightfun=f,),
+        :v => (weightfun=f,)
     )
     itp = GeoStatsInterpolant(solver, esri_102010(), xygrid)
 

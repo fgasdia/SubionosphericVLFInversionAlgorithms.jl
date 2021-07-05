@@ -72,8 +72,8 @@ function test_nlopt(scenario)
 
     τ = 2e-7*lengthscale
     solver = LWR(
-        :h′ => (weightfun=h->exp(-h^2/(2*τ^2)),),
-        :β => (weightfun=h->exp(-h^2/(2*τ^2)),),
+        :h => (weightfun=h->exp(-h^2/(2*τ^2)),),
+        :b => (weightfun=h->exp(-h^2/(2*τ^2)),),
         :v => (weightfun=h->exp(-h^2/(2*τ^2)),)
     )
 

@@ -68,7 +68,7 @@ function model_observation(itp::GeoStatsInterpolant, geox, tx, rx, datetime; pat
         transform(wgs84(), itp.projection, [getindex.(wpts, :lon) getindex.(wpts, :lat)])
     ))
 
-    problem = EstimationProblem(geox, pts, (:h′, :β))
+    problem = EstimationProblem(geox, pts, (:h, :b))
     solution = solve(problem, itp.method)
 
     geoaz = inverse(tx.longitude, tx.latitude, rx.longitude, rx.latitude).azi
@@ -80,8 +80,8 @@ function model_observation(itp::GeoStatsInterpolant, geox, tx, rx, datetime; pat
         ground = GROUND[LMPTools.get_groundcode(lat, lon)]
 
         input.segment_ranges[i] = dist
-        input.hprimes[i] = solution[:h′][i]
-        input.betas[i] = solution[:β][i]
+        input.hprimes[i] = solution[:h][i]
+        input.betas[i] = solution[:b][i]
         input.b_mags[i] = bfield.B
         input.b_dips[i] = LMP.dip(bfield)
         input.b_azs[i] = LMP.azimuth(bfield)
@@ -176,7 +176,7 @@ function model(itp::GeoStatsInterpolant, x, paths, datetime; pathstep=100e3, lwp
     hprimes = x[1:npts]
     betas = x[npts+1:end]
 
-    geox = georef((h′=filter(!isnan, hprimes), β=filter(!isnan, betas)), PointSet(itp.coords))
+    geox = georef((h=filter(!isnan, hprimes), b=filter(!isnan, betas)), PointSet(itp.coords))
 
     batch = BatchInput{ExponentialInput}()
     batch.name = "estimate"

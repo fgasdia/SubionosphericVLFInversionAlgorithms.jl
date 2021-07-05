@@ -29,8 +29,8 @@ function test_grids()
     τ = 2e-7*500e3
     f(h) = exp(-h^2/(2*τ^2))
     solver = LWR(
-        :h′ => (weightfun=f,),
-        :β => (weightfun=f,),
+        :h => (weightfun=f,),
+        :b => (weightfun=f,),
         :v => (weightfun=f,)
     )
     itp = GeoStatsInterpolant(solver, esri_102010(), xy_grid)

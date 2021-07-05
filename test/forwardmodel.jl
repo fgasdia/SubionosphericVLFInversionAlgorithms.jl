@@ -37,13 +37,13 @@ function test_models()
     τ = 2e-7*500e3
     f(h) = exp(-h^2/(2*τ^2))
     solver = LWR(
-        :h′ => (weightfun=f,),
-        :β => (weightfun=f,),
+        :h => (weightfun=f,),
+        :b => (weightfun=f,),
         :v => (weightfun=f,)
     )
     itp = GeoStatsInterpolant(solver, esri_102010(), xygrid)
 
-    geox = georef((h′=hprimes, β=betas), PointSet(itp.coords))
+    geox = georef((h=hprimes, b=betas), PointSet(itp.coords))
     input = SIA.model_observation(itp, geox, tx, rx, dt)
 
     # Make sure fields are filled in appropriately
