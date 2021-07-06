@@ -55,8 +55,10 @@ Return the `(x_grid, y_grid)` tuple of `StepRangeLen` in the `toproj` `Projectio
 `west` to `east` and `south` to `north` in the `fromproj` `Projection` using a step size
 of `dr` in the model space.
 
-`x_grid` begins at `west - dr` in model space and goes no further than `east + dr`. The
-equivalent bounds are also applied to `y_grid`.
+`x_grid` begins at `west - 2dr` in model space and goes no further than `east + 2dr`. The
+equivalent bounds are also applied to `y_grid`. In practice, localization is then applied
+to this grid. We go out `2dr` instead of `1dr` to compensate for the fact that the true
+distance may be larger than the projected `dr`.
 """
 function build_xygrid(west, east, south, north, fromproj=wgs84(), toproj=esri_102010(); dr=300e3)
     bounds = [west north; east north; west south; east south]
@@ -64,8 +66,8 @@ function build_xygrid(west, east, south, north, fromproj=wgs84(), toproj=esri_10
     (xmin, xmax), (ymin, ymax) = extrema(pts, dims=1)
 
     # add `dr` because otherwise end will be previous value that is a multiple of dr
-    x_grid = range(xmin-dr, xmax+dr; step=dr)
-    y_grid = range(ymin-dr, ymax+dr; step=dr)
+    x_grid = range(xmin-2dr, xmax+2dr; step=dr)
+    y_grid = range(ymin-2dr, ymax+2dr; step=dr)
 
     return x_grid, y_grid
 end
