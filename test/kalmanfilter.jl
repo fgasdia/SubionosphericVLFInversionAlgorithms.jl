@@ -67,7 +67,7 @@ function letkf_setup(scenario)
     # Technically this could vary with every time iteration based on the real data,
     # but usually we assume it is:
     σA = 0.1  # amplitude, dB
-    σp = deg2rad(1.0)  # phase, rad
+    σp = deg2rad(2.0)  # phase, rad
 
     R = [fill(σA^2, npaths); fill(σp^2, npaths)]
 
@@ -121,6 +121,7 @@ function test_letkf(scenario)
         @test all(x->abs(x)<120, ym(t=i-1)(:amp))
         @test all(x->abs(x)<4π, ym(t=i-1)(:phase))
         x(t=i) .= xa
+        sleep(0.5)
     end
 
     # LETKF_measupdate w/ amplitude only
@@ -129,6 +130,7 @@ function test_letkf(scenario)
             ρ=1.1, localization, datatypes=(:amp,))
         @test all(x->abs(x)<120, ym(t=i-1)(:amp))
         x(t=i) .= xa
+        sleep(0.5)
     end
 
     # LETKF_measupdate w/ phase only
@@ -137,5 +139,6 @@ function test_letkf(scenario)
             ρ=1.1, localization, datatypes=(:phase,))
         @test all(x->abs(x)<4π, ym(t=i-1)(:phase))
         x(t=i) .= xa
+        sleep(0.5)
     end
 end
