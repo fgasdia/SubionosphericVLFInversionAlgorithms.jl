@@ -49,7 +49,7 @@ function test_grids()
 
     mdr = mediandr(lola)
     @test dr != mdr
-    @test dr ≈ mdr atol=1e3
+    @test abs(dr - mdr) < 1e5
 
     c = 2000e3
     gc = gaspari1999_410(distarr, c)

@@ -224,7 +224,16 @@ The diamond actually overshoots the transmitter and receiver by `overshoot` mete
 a circle around the transmitter/receiver that joins with the diamond towards the
 receiver/transmitter.
 
-The localization is `1.0` if the grid point `intersects` the geometric Polygon of the diamond. 
+The localization is `1.0` if the grid point `intersects` the geometric Polygon of the diamond.
+
+Compared to [`obs2grid_diamondcircle`](@ref), this function extends the diamond to the
+minimum and maximum latitude extents of the receiver and transmitter circles and then takes
+the convex hull of the points. Note that the convex hull is not necessarily the "correct"
+solution because these points are on an ellipsoid and leads to an inappropriately large
+region to the south in the northern hemisphere (it should really be a concave hull or other
+"alpha" shape).
+
+See also: [`obs2grid_diamondcircle`](@ref)
 """
 function obs2grid_diamondpill(lonlats, paths; overshoot=200e3, halfwidth=300e3)
     ngrid = size(lonlats, 2)
@@ -307,6 +316,147 @@ function obs2grid_diamondpill(lonlats, paths; overshoot=200e3, halfwidth=300e3)
         for l in axes(lonlats,2)
             pt = LibGEOS.Point(lonlats[1,l], lonlats[2,l])
             localization[l,p] = LibGEOS.intersects(pt, diamond) ? 1 : 0
+        end
+
+        # push!(diamonds, diamond)
+        push!(diamonds, LibGEOS.coordinates(LibGEOS.boundary(diamond)))
+    end
+
+    return localization, diamonds
+end
+
+
+"""
+    obs2grid_diamondcircle(lonlats, paths; overshoot=200e3, halfwidth=300e3) → (localization, diamonds)
+
+Return a localization matrix of shape `(ngrid, npaths)` where `0.0` means the path does not
+affect the grid cell or `1.0` meaning the path does.
+
+`lonlats` is a dense matrix of longitudes and latitude points.
+`paths` is a vector of (transmitter, receiver) tuples representing each propagation path.
+
+`diamonds` is a vector of vectors of points describing the localization pattern around each
+path.
+
+This function uses a localization shape that is shaped like a diamond that extends from the
+transmitter to the receiver that widens to a width of `2halfwidth` meters in the middle.
+The diamond actually overshoots the transmitter and receiver by `overshoot` meters and forms
+a circle around the transmitter/receiver that joins with the diamond towards the
+receiver/transmitter.
+
+The localization is `1.0` if the grid point is contained within the geometric Polygon of
+the diamond.
+
+The difference between this function and [`obs2grid_diamondpill`](@ref) is that this
+function strictly puts a circle around the transmitter and receiver that ends at +/- 90°
+from the forward and back azimuths. This may lead to additional vertices where the circles
+merge with the diamond. The diamond polygon is formed explicitly (without computing the
+convex hull).
+
+See also: [`obs2grid_diamondpill`](@ref)
+"""
+function obs2grid_diamondcircle(lonlats, paths; overshoot=200e3, halfwidth=300e3)
+    ngrid = size(lonlats, 2)
+    npaths = length(paths)
+
+    localization = Matrix{Float64}(undef, ngrid, npaths)
+    diamonds = Vector{Vector{Vector{Float64}}}()
+    sizehint!(diamonds, npaths)
+    # diamonds = []
+
+    for p in eachindex(paths)
+        tx = paths[p][1]
+        rx = paths[p][2]
+
+        if tx.longitude > rx.longitude
+            eastern = tx
+            western = rx
+        else
+            eastern = rx
+            western = tx
+        end
+
+        fwdaz, backaz, dist, _ = inverse(eastern.longitude, eastern.latitude, western.longitude, western.latitude)
+
+        east_circ = Vector{Tuple{Float64,Float64}}(undef, 30)
+        azrange = range(backaz-90, backaz+90; length=30)
+        for i in eachindex(azrange)
+            az = azrange[i]
+            pt = forward(eastern.longitude, eastern.latitude, az, overshoot)
+            east_circ[i] = (pt.lon, pt.lat)
+        end
+
+        west_circ = Vector{Tuple{Float64,Float64}}(undef, 30)
+        azrange = range(fwdaz-90, fwdaz+90; length=30)
+        for i in eachindex(azrange)
+            az = azrange[i]
+            pt = forward(western.longitude, western.latitude, az, overshoot)
+            west_circ[i] = (pt.lon, pt.lat)
+        end
+
+        # Center point between tx and rx
+        center = forward(eastern.longitude, eastern.latitude, fwdaz, dist/2)
+
+        midpt1 = forward(center.lon, center.lat, fwdaz+90, halfwidth)
+        midpt2 = forward(center.lon, center.lat, fwdaz-90, halfwidth)
+        if midpt1.lat > midpt2.lat
+            northmidpt = midpt1
+            southmidpt = midpt2
+        else
+            northmidpt = midpt2
+            southmidpt = midpt1
+        end
+
+        allpts = [[pt[1], pt[2]] for pt in east_circ]
+
+        if east_circ[end][2] < east_circ[1][2]
+            # If end of east_circ is the south side
+            wpts = waypoints(GeodesicLine(east_circ[end]...; lon2=southmidpt.lon, lat2=southmidpt.lat); n=100)
+            append!(allpts, [[pt.lon, pt.lat] for pt in wpts])
+            if west_circ[1][2] < west_circ[end][2]
+                # If beginning of west_circ is also south
+                wpts = waypoints(GeodesicLine(southmidpt.lon, southmidpt.lat; lon2=west_circ[1][1], lat2=west_circ[1][2]); n=100)
+                append!(allpts, [[pt.lon, pt.lat] for pt in wpts])
+                append!(allpts, [[pt[1], pt[2]] for pt in west_circ])
+                wpts = waypoints(GeodesicLine(west_circ[end]...; lon2=northmidpt.lon, lat2=northmidpt.lat); n=100)
+                append!(allpts, [[pt.lon, pt.lat] for pt in wpts])
+            else
+                wpts = waypoints(GeodesicLine(southmidpt.lon, southmidpt.lat; lon2=west_circ[end][1], lat2=west_circ[end][2]); n=100)
+                append!(allpts, [[pt.lon, pt.lat] for pt in wpts])
+                append!(allpts, [[pt[1], pt[2]] for pt in west_circ])
+                wpts = waypoints(GeodesicLine(west_circ[1]...; lon2=northmidpt.lon, lat2=northmidpt.lat); n=100)
+                append!(allpts, [[pt.lon, pt.lat] for pt in wpts])
+            end
+            append!(wpts, waypoints(GeodesicLine(northmidpt.lon, northmidpt.lat; lon2=east_circ[1][1], lat2=east_circ[1][2]); n=100))
+        else
+            # end of east_circ is north side
+            wpts = waypoints(GeodesicLine(east_circ[end]...; lon2=northmidpt.lon, lat2=northmidpt.lat); n=100)
+            append!(allpts, [[pt.lon, pt.lat] for pt in wpts])
+            if west_circ[1][2] > west_circ[end][2]
+                # If beginning of west_circ is north side
+                wpts = waypoints(GeodesicLine(northmidpt.lon, northmidpt.lat; lon2=west_circ[1][1], lat2=west_circ[1][2]); n=100)
+                append!(allpts, [[pt.lon, pt.lat] for pt in wpts])
+                append!(allpts, [[pt[1], pt[2]] for pt in west_circ])
+                wpts = waypoints(GeodesicLine(west_circ[1]...; lon2=southmidpt.lon, southmidpt.lat); n=100)
+                append!(allpts, [[pt.lon, pt.lat] for pt in wpts])
+            else
+                wpts = waypoints(GeodesicLine(northmidpt.lon, northmidpt.lat; lon2=west_circ[end][1], lat2=west_circ[end][2]); n=100)
+                append!(allpts, [[pt.lon, pt.lat] for pt in wpts])
+                append!(allpts, [[pt[1], pt[2]] for pt in west_circ])
+                wpts = waypoints(GeodesicLine(west_circ[end]...; lon2=southmidpt.lon, southmidpt.lat); n=100)
+                append!(allpts, [[pt.lon, pt.lat] for pt in wpts])
+            end
+        end
+
+        unique!(allpts)
+        push!(allpts, allpts[1])  # first = end to close LineString
+        
+        diamond = LibGEOS.Polygon([allpts])
+
+        # This sets to 1 if the gridcell is within the diamond at all and 0 otherwise
+        for l in axes(lonlats,2)
+            pt = LibGEOS.Point(lonlats[1,l], lonlats[2,l])
+            localization[l,p] = LibGEOS.contains(diamond, pt) ? 1 : 0
         end
 
         # push!(diamonds, diamond)
