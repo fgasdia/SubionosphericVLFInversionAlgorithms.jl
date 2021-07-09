@@ -543,6 +543,22 @@ function obs2grid_distance(lonlats, paths; r=200e3, pathstep=100e3)
 end
 
 """
+    filterbounds!(localization, lonlat, west, east, south, north)
+
+Set `localization` entries to `0` if the corresponding `lonlat` entry is outside of the
+rectangular region bounded by `west`, `east`, `south`, `north`.
+"""
+function filterbounds!(localization, lonlat, west, east, south, north)
+    for i in axes(lonlat, 2)
+        if lonlat[1,i] < west || lonlat[1,i] > east || lonlat[2,i] < south || lonlat[2,i] > north
+            localization[i,:] .= 0
+        end
+    end
+    return localization
+end
+
+
+"""
     anylocal(localization)
 
 Convenience function that returns a `Vector{Bool}` of whether or not there is any
