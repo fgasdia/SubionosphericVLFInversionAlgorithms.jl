@@ -1112,11 +1112,9 @@ version = "0.9.0"
 
 [[ScatteredInterpolation]]
 deps = ["Combinatorics", "Distances", "LinearAlgebra", "NearestNeighbors"]
-git-tree-sha1 = "bd9541c58277f1c514b348bc616dac1148a10dfe"
-repo-rev = "master"
-repo-url = "https://github.com/fgasdia/ScatteredInterpolation.jl"
+git-tree-sha1 = "0d642a08199bbeccd874b33fe3a1b699d345ca79"
 uuid = "3f865c0f-6dca-5f4d-999b-29fe1e7e3c92"
-version = "0.3.5"
+version = "0.3.6"
 
 [[SciMLBase]]
 deps = ["ArrayInterface", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "RecipesBase", "RecursiveArrayTools", "StaticArrays", "Statistics", "Tables", "TreeViews"]

@@ -523,6 +523,10 @@ function obs2grid_distance(lonlats, paths; r=200e3, pathstep=100e3)
         tx, rx = paths[p][1], paths[p][2]
         _, wpts = pathpts(tx, rx; dist=pathstep)
 
+        # `wpts[1]` is at the transmitter. For the purposes of localization, begin with the
+        # next waypoint after the transmitter. (`wpts[end]` is before the receiver)
+        wpts = wpts[2:end]
+
         for j in axes(lonlats,2)
             lo, la = lonlats[1,j], lonlats[2,j]
             dmin = Inf
