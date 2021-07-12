@@ -80,16 +80,16 @@ and the second half is ``β``.
 """
 function tikhonov_gradient(itp, m, λh, λb; localizationfcn=nothing, step=100e3)
     (minx, maxx), (miny, maxy) = extrema(itp.coords; dims=2)
-    xgrid = range(minx, maxx; step)
-    ygrid = range(miny, maxy; step)
+    x_grid = range(minx, maxx; step)
+    y_grid = range(miny, maxy; step)
 
     npts = size(itp.coords, 2)
 
-    h_grid = dense_grid(itp, m[1:npts], xgrid, ygrid)
-    b_grid = dense_grid(itp, m[npts+1:end], xgrid, ygrid)
+    h_grid = dense_grid(itp, m[1:npts], x_grid, y_grid)
+    b_grid = dense_grid(itp, m[npts+1:end], x_grid, y_grid)
 
     if !isnothing(localizationfcn)
-        lonlats = transform(itp.projection, wgs84(), permutedims(densify(xgrid, ygrid)))
+        lonlats = transform(itp.projection, wgs84(), permutedims(densify(x_grid, y_grid)))
         localization = localizationfcn(permutedims(lonlats))
         h_grid[.!localization] .= NaN
         b_grid[.!localization] .= NaN
@@ -123,16 +123,16 @@ computing the gradient.
 """
 function totalvariation(itp, m, μh, μb, αh, αb; localizationfcn=nothing, step=100e3)
     (minx, maxx), (miny, maxy) = extrema(itp.coords; dims=2)
-    xgrid = range(minx, maxx; step)
-    ygrid = range(miny, maxy; step)
+    x_grid = range(minx, maxx; step)
+    y_grid = range(miny, maxy; step)
 
     npts = size(itp.coords, 2)
 
-    h_grid = dense_grid(itp, m[1:npts], xgrid, ygrid)
-    b_grid = dense_grid(itp, m[npts+1:end], xgrid, ygrid)
+    h_grid = dense_grid(itp, m[1:npts], x_grid, y_grid)
+    b_grid = dense_grid(itp, m[npts+1:end], x_grid, y_grid)
 
     if !isnothing(localizationfcn)
-        lonlats = transform(itp.projection, wgs84(), permutedims(densify(xgrid, ygrid)))
+        lonlats = transform(itp.projection, wgs84(), permutedims(densify(x_grid, y_grid)))
         localization = localizationfcn(permutedims(lonlats))
         h_grid[.!localization] .= NaN
         b_grid[.!localization] .= NaN
