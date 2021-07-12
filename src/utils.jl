@@ -141,8 +141,10 @@ function totalvariation(itp, m, μh, μb, αh, αb; localizationfcn=nothing, ste
     h_gy, h_gx = diff(h_grid; dims=1), diff(h_grid; dims=2)
     b_gy, b_gx = diff(b_grid; dims=1), diff(b_grid; dims=2)
 
-    h_gy, h_gx = filter(!isnan, h_gy), filter(!isnan, h_gx)
-    b_gy, b_gx = filter(!isnan, b_gy), filter(!isnan, b_gx)
+    filter!(!isnan, h_gy)
+    filter!(!isnan, h_gx)
+    filter!(!isnan, b_gy)
+    filter!(!isnan, b_gx)
 
     αh² = αh^2
     αb² = αb^2
