@@ -63,10 +63,24 @@ outside these bounds.
 
 Guitton and Symes 2003 Robust inversion...
 """
-function huber(r, ϵ)
-    M(x, ϵ) = abs(x) <= ϵ ? x^2/(2*ϵ) : abs(x) - ϵ/2
+function hubernorm(r, ϵ)
+    M(x) = abs(x) <= ϵ ? abs2(x)/(2*ϵ) : abs(x) - ϵ/2
 
-    return sum(x->M(x, ϵ), r)
+    return sum(M, r)
+end
+
+"""
+    pseudohubernorm(r, ϵ)
+
+Compute the pseudo-Huber norm, which is a smooth approximation of [`hubernorm`](@ref),
+approximately the L2 norm squared between `-ϵ` and `ϵ` and the L1 norm outside these bounds.
+
+Hartley and Zisserman, 2004, Multiple View Geometry in Computer Vision
+"""
+function pseudohubernorm(r, ϵ)
+    M(x) = ϵ^2*(sqrt(1 + (x/ϵ)^2) - 1)
+
+    return sum(M, r)
 end
 
 """

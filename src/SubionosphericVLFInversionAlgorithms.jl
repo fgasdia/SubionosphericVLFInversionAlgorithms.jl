@@ -18,7 +18,7 @@ export wgs84, esri_102010
 export gaspari1999_410, lonlatgrid_dists, obs2grid_diamondpill, obs2grid_distance, anylocal,
     modgaussian, build_xygrid, pathname, densify, gaussianstddev, compactlengthscale,
     dense_grid, mediandr, filterbounds!
-export totalvariation, tikhonov_gradient, l2norm, objective
+export totalvariation, tikhonov_gradient, l2norm, objective, hubernorm, pseudohubernorm
 export phasediff
 
 const RNG = MersenneTwister(1234)
