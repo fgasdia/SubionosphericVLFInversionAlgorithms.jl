@@ -104,6 +104,12 @@ end
         test_grids()
     end
 
+    @testset "Utils" begin
+        @info "Testing utils"
+        test_totalvariation()
+        test_tikhonov()
+    end
+
     @testset "Kalman filter" begin
         @info "Testing Kalman filter"
         test_letkf(dayscenario)
@@ -112,11 +118,5 @@ end
     @testset "NLopt" begin
         @info "Testing NLopt"
         test_nlopt(dayscenario)
-    end
-
-    @testset "Utils" begin
-        @info "Testing utils"
-        test_totalvariation()
-        test_tikhonov()
     end
 end

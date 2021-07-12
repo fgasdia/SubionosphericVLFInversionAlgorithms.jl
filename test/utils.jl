@@ -4,7 +4,7 @@ function test_totalvariation()
     xygrid = build_xygrid(x(:h))
 
     lengthscale = 500e3
-    τ = 2e-7*lengthscale
+    τ = 1e-7*lengthscale
     f(h) = exp(-h^2/(2*τ^2))
     solver = LWR(
         :h => (weightfun=f,),
@@ -13,7 +13,7 @@ function test_totalvariation()
     )
     itp = GeoStatsInterpolant(solver, esri_102010(), xygrid)
 
-    localizationfcn(lola) = anylocal(obs2grid_distance(lola, paths; r=lengthscale))
+    localizationfcn(lola) = anylocal(obs2grid_distance(lola, paths; r=lengthscale/2))
 
     μh, μb = 1, 1
     αh, αb = 0, 0

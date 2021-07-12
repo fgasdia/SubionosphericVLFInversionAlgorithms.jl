@@ -138,13 +138,12 @@ function totalvariation(itp, m, μh, μb, αh, αb; localizationfcn=nothing, ste
         b_grid[.!localization] .= NaN
     end
 
-    h_gy, h_gx = diff(h_grid; dims=1), diff(h_grid; dims=2)
-    b_gy, b_gx = diff(b_grid; dims=1), diff(b_grid; dims=2)
+    h_gy, h_gx = imgradients(h_grid, KernelFactors.prewitt)
+    b_gy, b_gx = imgradients(b_grid, KernelFactors.prewitt)
 
-    filter!(!isnan, h_gy)
-    filter!(!isnan, h_gx)
-    filter!(!isnan, b_gy)
-    filter!(!isnan, b_gx)
+    h_gy, h_gx = filter(!isnan, h_gy), filter(!isnan, h_gx)
+    b_gy, b_gx = filter(!isnan, b_gy), filter(!isnan, b_gx)
+    @assert size(h_gy) == size(h_gx) == size(b_gy) == size(b_gx)
 
     αh² = αh^2
     αb² = αb^2

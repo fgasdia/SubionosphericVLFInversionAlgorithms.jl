@@ -3,7 +3,8 @@ module SubionosphericVLFInversionAlgorithms
 using Random, Statistics, LinearAlgebra, Dates
 using StaticArrays, AxisKeys, Distributions
 using GeographicLib, LibGEOS, Proj4
-using NLopt
+using NLopt, ImageFiltering
+using ImageFiltering: KernelFactors
 using ScatteredInterpolation, GeoStats, Interpolations
 using LongwaveModePropagator
 const LMP = LongwaveModePropagator
