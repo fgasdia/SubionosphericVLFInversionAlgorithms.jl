@@ -62,7 +62,7 @@ end
 
 function sterminator(lo, la)
     dt = DateTime(2020, 3, 1, 2, 0)
-    smoothterminator(zenithangle(la, lo, dt); steepness=0.9)
+    smoothterminator(zenithangle(la, lo, dt); steepness=0.8)
 end
 
 function bumpyday(lo, la)
@@ -158,7 +158,7 @@ function scattereditp(f)
         color=:amp, xlims=extrema(fine_xgrid), ylims=extrema(fine_ygrid))
     scatter!(h1, itppts[1,:], itppts[2,:];
         zcolor=filter(!isnan, h), color=:amp, markerstrokecolor="black", legend=false)
-    h2 = heatmap(fine_xgrid, fine_ygrid, errgrid; clims=(-0.15, 0.15),
+    h2 = heatmap(fine_xgrid, fine_ygrid, errgrid; clims=(-0.2, 0.2),
         color=:coolwarm, xlims=extrema(fine_xgrid), ylims=extrema(fine_ygrid), yticks=nothing)
     scatter!(h2, itppts[1,:], itppts[2,:]; color=:black, legend=false)
     plot(h1, h2; size=(1100,600), layout=grid(1,2,widths=[0.45,0.55]))
@@ -177,14 +177,18 @@ function geostatsitp(f, dr=300e3, lengthscale=1200e3, τ=9e-8*lengthscale)
     lola = permutedims(transform(modelproj, wgs84(), permutedims(xy_grid)))
     
     h = Matrix{Float64}(undef, gridshape...)
+    b = similar(h)
     for i in axes(lola,2)
-        h[i] = f(lola[:,i]...)[1]
+        hp, be = f(lola[:,i]...)
+        h[i] = hp
+        b[i] = be
     end
 
     localization = obs2grid_distance(lola, paths; r=lengthscale/2)
     locmask = anylocal(localization)
 
     h[.!locmask] .= NaN
+    b[.!locmask] .= NaN
 
     itppts = build_xygrid(KeyedArray(h; y=y_grid, x=x_grid))
 
@@ -199,13 +203,27 @@ function geostatsitp(f, dr=300e3, lengthscale=1200e3, τ=9e-8*lengthscale)
 
     trueh, trueb, fine_xgrid, fine_ygrid = truth(f)
     hgrid = dense_grid(itp, h, fine_xgrid, fine_ygrid)
-    errgrid = hgrid .- trueh
+    bgrid = dense_grid(itp, b, fine_xgrid, fine_ygrid)
+    herrgrid = hgrid .- trueh
+    berrgrid = bgrid .- trueb
 
-    h1 = heatmap(fine_xgrid, fine_ygrid, hgrid; clims=clims(f), cbar=false,
-        color=:amp, xlims=extrema(fine_xgrid), ylims=extrema(fine_ygrid))
+    # plotgrid = hgrid
+    # ploterrgrid = herrgrid
+    # pclims = (71, 87)
+    # pcol = :amp
+    # eclims = (-0.2, 0.2)
+
+    plotgrid = bgrid
+    ploterrgrid = berrgrid
+    pclims = (0.2, 0.6)
+    pcol = :tempo
+    eclims = (-0.01, 0.01)
+
+    h1 = heatmap(fine_xgrid, fine_ygrid, plotgrid; clims=pclims, cbar=false,
+        color=pcol, xlims=extrema(fine_xgrid), ylims=extrema(fine_ygrid))
     scatter!(h1, itppts[1,:], itppts[2,:];
-        zcolor=filter(!isnan, h), color=:amp, markerstrokecolor="black", legend=false)
-    h2 = heatmap(fine_xgrid, fine_ygrid, errgrid; clims=(-0.15, 0.15),
+        zcolor=filter(!isnan, h), color=pcol, markerstrokecolor="black", legend=false)
+    h2 = heatmap(fine_xgrid, fine_ygrid, ploterrgrid; clims=eclims,
         color=:coolwarm, xlims=extrema(fine_xgrid), ylims=extrema(fine_ygrid), yticks=nothing)
     scatter!(h2, itppts[1,:], itppts[2,:]; color=:black, legend=false)
     plot(h1, h2; size=(1100,600), layout=grid(1,2,widths=[0.45,0.55]))
