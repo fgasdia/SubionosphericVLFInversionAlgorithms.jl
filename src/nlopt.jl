@@ -34,8 +34,9 @@ function nlopt_estimate(f, xb; xmin=(65, 0.2), xmax=(90, 1.0), step=(2.0, 0.05),
     minf, minx, ret = optimize(opt, x0)
 
     xest = copy(xb)
-    xest(:h)[.!isnan.(xb(:h))] .= minx[1:npts]
-    xest(:b)[.!isnan.(xb(:b))] .= minx[npts+1:end]
+    gridshape = (length(xest.y), length(xest.x))
+    xest(:h)[.!isnan.(xb(:h))] .= reshape(minx[1:npts], gridshape...)
+    xest(:b)[.!isnan.(xb(:b))] .= reshape(minx[npts+1:end], gridshape...)
 
     return minf, xest, ret
 end
