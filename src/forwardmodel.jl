@@ -61,6 +61,9 @@ end
 Build the `ExponentialInput` for a single path from `tx` to `rx` at `datetime`.
 """
 function model_observation(itp::GeoStatsInterpolant, geox, tx, rx, datetime; pathstep=100e3)
+    :h in itp.method.varnames && :b in itp.method.varnames ||
+        @warn "`:h` and `:b` should be defined in `itp.method`"
+
     input, wpts = _model_observation(tx, rx; pathstep)
 
     # Projected wpts
