@@ -125,20 +125,17 @@ function test_letkf(scenario)
     end
 
     # LETKF_measupdate w/ amplitude only
-    for i = 1:ntimes
-        xa = LETKF_measupdate(x->H(x,i-1), x(t=i-1), y(t=i), R[1:npaths];
-            ρ=1.1, localization, datatypes=(:amp,))
-        @test all(x->abs(x)<120, ym(t=i-1)(:amp))
-        x(t=i) .= xa
-        sleep(0.5)
-    end
-
+    i = 1
+    xa = LETKF_measupdate(x->H(x,i-1), x(t=i-1), y(t=i), R[1:npaths];
+        ρ=1.1, localization, datatypes=(:amp,))
+    @test all(x->abs(x)<120, ym(t=i-1)(:amp))
+    x(t=i) .= xa
+    sleep(0.5)
+    
     # LETKF_measupdate w/ phase only
-    for i = 1:ntimes
-        xa = LETKF_measupdate(x->H(x,i-1), x(t=i-1), y(t=i), R[npaths+1:end];
-            ρ=1.1, localization, datatypes=(:phase,))
-        @test all(x->abs(x)<4π, ym(t=i-1)(:phase))
-        x(t=i) .= xa
-        sleep(0.5)
-    end
+    xa = LETKF_measupdate(x->H(x,i-1), x(t=i-1), y(t=i), R[npaths+1:end];
+        ρ=1.1, localization, datatypes=(:phase,))
+    @test all(x->abs(x)<4π, ym(t=i-1)(:phase))
+    x(t=i) .= xa
+    sleep(0.5)
 end

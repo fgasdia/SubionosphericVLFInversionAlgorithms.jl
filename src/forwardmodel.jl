@@ -164,7 +164,7 @@ function model_observation(hbfcn, tx, rx, datetime; pathstep=100e3)
 end
 
 """
-    model(itp, x, paths, datetime; pathstep=100e3, lwpc=true)
+    model(itp, x, paths, datetime; pathstep=100e3, lwpc=true, numexe=16)
 
 Return the model observations `(amps, phases)` for spatial interpolation method `itp` and
 `datetime`.
@@ -173,8 +173,9 @@ If `x` is a `KeyedArray`, then it is transformed to a vector where the first hal
 and the second half is ``β``.
 
 Uses LWPC as the forward model if `lwpc` is true; otherwise, uses LongwaveModePropagator.jl.
+`numexe` specifies the number of LWPC executables to use.
 """
-function model(itp::GeoStatsInterpolant, x, paths, datetime; pathstep=100e3, lwpc=true)
+function model(itp::GeoStatsInterpolant, x, paths, datetime; pathstep=100e3, lwpc=true, numexe=16)
     npts = length(x) ÷ 2
     hprimes = x[1:npts]
     betas = x[npts+1:end]
@@ -194,7 +195,7 @@ function model(itp::GeoStatsInterpolant, x, paths, datetime; pathstep=100e3, lwp
     end
 
     if lwpc
-        computejob = LocalParallel("estimate", ".", "C:\\LWPCv21\\lwpm.exe", 16, 90)
+        computejob = LocalParallel("estimate", ".", "C:\\LWPCv21\\lwpm.exe", numexe, 90)
         output = LWPC.run(batch, computejob; savefile=false)
     else
         output = LMP.buildrun(batch; params=LMPParams(approxsusceptibility=true))
@@ -217,10 +218,10 @@ function model(itp::GeoStatsInterpolant, x, paths, datetime; pathstep=100e3, lwp
 
     return amps, phases
 end
-model(itp::GeoStatsInterpolant, x::KeyedArray, paths, datetime; pathstep=100e3, lwpc=true) =
-    model(itp, [filter(!isnan, x(:h)); filter(!isnan, x(:b))], paths, datetime; pathstep, lwpc)
+model(itp::GeoStatsInterpolant, x::KeyedArray, paths, datetime; pathstep=100e3, lwpc=true, numexe=16) =
+    model(itp, [filter(!isnan, x(:h)); filter(!isnan, x(:b))], paths, datetime; pathstep, lwpc, numexe)
 
-function model(itp::ScatteredInterpolant, x, paths, datetime; pathstep=100e3, lwpc=true)
+function model(itp::ScatteredInterpolant, x, paths, datetime; pathstep=100e3, lwpc=true, numexe=16)
     hprimes = x(:h)
     betas = x(:b)
 
@@ -240,7 +241,7 @@ function model(itp::ScatteredInterpolant, x, paths, datetime; pathstep=100e3, lw
     end
 
     if lwpc
-        computejob = LocalParallel("estimate", ".", "C:\\LWPCv21\\lwpm.exe", 16, 90)
+        computejob = LocalParallel("estimate", ".", "C:\\LWPCv21\\lwpm.exe", numexe, 90)
         output = LWPC.run(batch, computejob; savefile=false)
     else
         output = LMP.buildrun(batch; params=LMPParams(approxsusceptibility=true))
@@ -264,7 +265,7 @@ function model(itp::ScatteredInterpolant, x, paths, datetime; pathstep=100e3, lw
 end
 
 """
-    model(hbfcn::Function, paths, datetime; pathstep=100e3, lwpc=true)
+    model(hbfcn::Function, paths, datetime; pathstep=100e3, lwpc=true, numexe=16)
 
 Use `hbfcn`, a function of `(lon, lat, datetime)`, to compute `(h′, β)` along each 
 vector of (transmitter, receiver) `paths`.
@@ -274,11 +275,11 @@ vector of (transmitter, receiver) `paths`.
 If `lwpc` is `true`, then LWPC is used as the forward model. If `lwpc` is false, then
 LongwaveModePropagator is used as the forward model. As of `v0.2.0` of LongwaveModePropagator,
 it is significantly slower than LWPC when using many segemnts and thus not preferred for
-ionosphere estimation.
+ionosphere estimation. `numexe` specifies the number of LWPC executables to use.
 
 See also: [`model_observation`](@ref)
 """
-function model(hbfcn::Function, paths, datetime; pathstep=100e3, lwpc=true) 
+function model(hbfcn::Function, paths, datetime; pathstep=100e3, lwpc=true, numexe=16) 
     batch = BatchInput{ExponentialInput}()
     batch.name = "estimate"
     batch.description = ""
@@ -292,7 +293,7 @@ function model(hbfcn::Function, paths, datetime; pathstep=100e3, lwpc=true)
     end
 
     if lwpc
-        computejob = LocalParallel("estimate", ".", "C:\\LWPCv21\\lwpm.exe", 16, 90)
+        computejob = LocalParallel("estimate", ".", "C:\\LWPCv21\\lwpm.exe", numexe, 90)
         output = LWPC.run(batch, computejob; savefile=false)
     else
         output = LMP.buildrun(batch; params=LMPParams(approxsusceptibility=true))

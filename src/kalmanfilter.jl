@@ -1,6 +1,5 @@
 """
-LETKF_measupdate(H, xb, y, R, y_grid, x_grid, pathnames, ens_size;
-    ρ=1.1, localization=nothing, datatypes=(:amp, :phase)) → (xa, yb)
+LETKF_measupdate(H, xb, y, R; ρ=1.1, localization=nothing, datatypes=(:amp, :phase)) → (xa, yb)
 
 LETKF (Local Ensemble Transform Kalman Filter) analysis update applied locally, following
 the steps in [^1].
