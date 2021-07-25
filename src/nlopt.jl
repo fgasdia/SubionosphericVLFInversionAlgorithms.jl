@@ -30,10 +30,7 @@ function nlopt_estimate(f, xb; xmin=(65, 0.2), xmax=(90, 1.0), step=(2.0, 0.05),
     opt.min_objective = f
 
     local_opt = Opt(:LN_COBYLA, 2*npts)
-    local_opt.lower_bounds = [fill(xmin[1], npts); fill(xmin[2], npts)]
-    local_opt.upper_bounds = [fill(xmax[1], npts); fill(xmax[2], npts)]
     local_opt.initial_step = [fill(step[1], npts); fill(step[2], npts)]
-    local_opt.min_objective = f
     local_opt.maxeval = neval ÷ 10
 
     opt.local_optimizer = local_opt
