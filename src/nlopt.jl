@@ -29,15 +29,22 @@ function nlopt_estimate(f, xb; xmin=(65, 0.2), xmax=(90, 1.0), step=(2.0, 0.05),
     opt.maxeval = neval
     opt.min_objective = f
 
-    opt.local_optimizer = :LN_COBYLA
-    opt.xtol_rel = xtol_rel
+    local_opt = Opt(:LN_COBYLA, 2*npts)
+    local_opt.lower_bounds = [fill(xmin[1], npts); fill(xmin[2], npts)]
+    local_opt.upper_bounds = [fill(xmax[1], npts); fill(xmax[2], npts)]
+    local_opt.initial_step = [fill(step[1], npts); fill(step[2], npts)]
+    local_opt.xtol_rel = xtol_rel
+    local_opt.min_objective = f
+    local_opt.maxeval = neval ÷ 10
+
+    opt.local_optimizer = local_opt
 
     x0 = [filter(!isnan, xb(:h)); filter(!isnan, xb(:b))]
 
     minf, minx, ret = optimize(opt, x0)
 
     xest = copy(xb)
-    gridshape = (length(xest.y), length(xest.x))
+    # gridshape = (length(xest.y), length(xest.x))
     xest(:h)[.!isnan.(xb(:h))] .= minx[1:npts]
     xest(:b)[.!isnan.(xb(:b))] .= minx[npts+1:end]
 
