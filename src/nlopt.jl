@@ -1,5 +1,5 @@
 """
-    nlopt_estimate(f, xb; xmin=(65, 0.2), xmax=(90, 1.0), step=(2.0, 0.05), xtol_rel=1e-5,
+    nlopt_estimate(f, xb; xmin=(65, 0.2), xmax=(90, 1.0), step=(2.0, 0.05),
         method=:LN_COBYLA, neval=600, seed=1234) → (minf, minx, ret)
 
 Perform a nonlinear minimization using `method` given the objective function `f` and initial
@@ -14,7 +14,7 @@ by derivative-free methods. The values should be large enough that the value of 
 objective function changes significantly, but not too big so that we find the local optimum
 nearest to `xb`.
 """
-function nlopt_estimate(f, xb; xmin=(65, 0.2), xmax=(90, 1.0), step=(2.0, 0.05), xtol_rel=1e-5,
+function nlopt_estimate(f, xb; xmin=(65, 0.2), xmax=(90, 1.0), step=(2.0, 0.05),
     method=:LN_COBYLA, neval=600, seed=1234)
 
     NLopt.srand(seed)
@@ -33,7 +33,6 @@ function nlopt_estimate(f, xb; xmin=(65, 0.2), xmax=(90, 1.0), step=(2.0, 0.05),
     local_opt.lower_bounds = [fill(xmin[1], npts); fill(xmin[2], npts)]
     local_opt.upper_bounds = [fill(xmax[1], npts); fill(xmax[2], npts)]
     local_opt.initial_step = [fill(step[1], npts); fill(step[2], npts)]
-    local_opt.xtol_rel = xtol_rel
     local_opt.min_objective = f
     local_opt.maxeval = neval ÷ 10
 
