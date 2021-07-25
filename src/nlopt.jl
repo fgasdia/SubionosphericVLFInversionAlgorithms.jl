@@ -29,7 +29,7 @@ function nlopt_estimate(f, xb; xmin=(65, 0.2), xmax=(90, 1.0), step=(2.0, 0.05),
     opt.maxeval = neval
     opt.min_objective = f
 
-    opt.set_local_optimizer = :LN_COBYLA
+    opt.local_optimizer = :LN_COBYLA
     opt.xtol_rel = xtol_rel
 
     x0 = [filter(!isnan, xb(:h)); filter(!isnan, xb(:b))]
