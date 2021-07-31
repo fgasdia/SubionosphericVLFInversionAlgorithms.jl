@@ -547,6 +547,44 @@ function obs2grid_distance(lonlats, paths; r=200e3, pathstep=100e3)
 end
 
 """
+    obs2grid_distances(lonlats, paths; pathstep=100e3)
+
+Return matrix of actual distances from each path to each grid point.
+
+Like `obs2grid_distance` except it  returns actual distances instead of the result.
+TODO: combine these two functions.
+"""
+function obs2grid_distances(lonlats, paths; pathstep=100e3)
+    ngrid = size(lonlats, 2)
+    npaths = length(paths)
+
+    distances = Matrix{Float64}(undef, ngrid, npaths)
+    for p in eachindex(paths)
+        tx, rx = paths[p][1], paths[p][2]
+        _, wpts = pathpts(tx, rx; dist=pathstep)
+
+        # `wpts[1]` is at the transmitter. For the purposes of localization, begin with the
+        # next waypoint after the transmitter. (`wpts[end]` is before the receiver)
+        wpts = wpts[2:end]
+
+        for j in axes(lonlats,2)
+            lo, la = lonlats[1,j], lonlats[2,j]
+            dmin = Inf
+            for i in eachindex(wpts)
+                d = inverse(lo, la, wpts[i].lon, wpts[i].lat).dist
+                if d < dmin
+                    dmin = d
+                end
+            end
+            
+            distances[j,p] = dmin
+        end
+    end
+
+    return distances
+end
+
+"""
     filterbounds!(localization, lonlat, west, east, south, north)
 
 Set `localization` entries to `0` if the corresponding `lonlat` entry is outside of the

@@ -73,4 +73,7 @@ function test_grids()
     localization2 = obs2grid_distance(lola, paths)
     @test size(localization2) == size(localization)
     # heatmap(x_grid, y_grid, reshape(localization2, (length(y_grid), length(x_grid))))
+
+    locdistances = obs2grid_distances(lola, paths)
+    @test size(locdistances) == size(localization)
 end
