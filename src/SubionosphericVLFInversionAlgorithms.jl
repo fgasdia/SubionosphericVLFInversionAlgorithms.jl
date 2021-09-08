@@ -13,7 +13,7 @@ using ProgressMeter
 using LMPTools, PropagationModelPrep
 
 export vfsa, LETKF_measupdate, nlopt_estimate
-export model, ensemble_model!, ScatteredInterpolant, GeoStatsInterpolant
+export model, ensemble_model!, ScatteredInterpolant, GeoStatsInterpolant, lonlatmodel
 export wgs84, esri_102010
 export gaspari1999_410, lonlatgrid_dists, obs2grid_diamondpill, obs2grid_distance, anylocal,
     modgaussian, build_xygrid, pathname, densify, gaussianstddev, compactlengthscale,

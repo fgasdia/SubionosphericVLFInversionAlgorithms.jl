@@ -317,3 +317,47 @@ function model(hbfcn::Function, paths, datetime; pathstep=100e3, lwpc=true, nume
 
     return amps, phases
 end
+
+function lonlatsegment(lon, lat, dist, dt, hbfcn, nufcn, bfcn, gfcn)
+    h, b = hbfcn(lon, lat, dt)
+    return HomogeneousWaveguide(
+        bfcn(lon, lat, dt),
+        Species(LMP.QE, LMP.ME, z->waitprofile(z, h, b), z->nufcn(z, lon, lat)),
+        gfcn(lon, lat),
+        dist
+    )
+end
+
+"""
+    lonlatmodel
+
+Run LMP over `paths` using functions of ``h′, β``, ``BField``, ``Ground``, and collision
+frequency.
+
+# Arguments
+
+- `hbfcn(lon, lat, datetime) → h′, β`
+- `nufcn(z, lon, lat) → ν`
+- `bfcn(geoaz, lon, lat, datetime) → BField`
+- `gfcn(lon, lat) → Ground`
+"""
+function lonlatmodel(hbfcn, nufcn, bfcn, gfcn, paths, datetime; pathstep=100e3)
+    amps = Vector{Float64}(undef, length(paths))
+    phases = similar(amps)
+    for j in eachindex(paths)
+        tx, rx = paths[j]
+        _, wpts = pathpts(tx, rx; dist=pathstep)
+
+        geoaz = inverse(tx.longitude, tx.latitude, rx.longitude, rx.latitude).azi
+
+        bffcn(lon, lat, dt) = bfcn(geoaz, lon, lat, dt)
+        wvg = SegmentedWaveguide([lonlatsegment(wpts[i].lon, wpts[i].lat, wpts[i].dist,
+            datetime, hbfcn, nufcn, bffcn, gfcn) for i in eachindex(wpts)])
+
+        gs = GroundSampler(range(tx, rx), Fields.Ez)
+        _, a, p = propagate(wvg, tx, gs)
+        amps[j] = a
+        phases[j] = p
+    end
+    return amps, phases
+end
