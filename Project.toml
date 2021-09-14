@@ -1,7 +1,7 @@
 name = "SubionosphericVLFInversionAlgorithms"
 uuid = "0803ec96-7665-482a-9427-2785addca038"
 authors = ["Forrest Gasdia <17058025+fgasdia@users.noreply.github.com>"]
-version = "0.0.8"
+version = "0.0.9"
 
 [deps]
 AxisKeys = "94b1ba4f-4ee9-5380-92f1-94cde586c3c5"
@@ -37,7 +37,7 @@ LongwaveModePropagator = "0.3"
 NLopt = "0.6"
 ProgressMeter = "1.1"
 Proj4 = "0.7"
-PropagationModelPrep = "0.0.11"
+PropagationModelPrep = "0.0.12"
 ScatteredInterpolation = "0.3"
 StaticArrays = "1"
 UnPack = "1"
