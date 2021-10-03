@@ -15,7 +15,7 @@ objective function changes significantly, but not too big so that we find the lo
 nearest to `xb`.
 """
 function nlopt_estimate(f, xb; xmin=(65, 0.2), xmax=(90, 1.0), step=(2.0, 0.05),
-    method=:LN_COBYLA, neval=600, seed=1234)
+    method=:LN_COBYLA, neval=600, seed=1234, use_local_opt=false)
 
     NLopt.srand(seed)
 
@@ -29,11 +29,19 @@ function nlopt_estimate(f, xb; xmin=(65, 0.2), xmax=(90, 1.0), step=(2.0, 0.05),
     opt.maxeval = neval
     opt.min_objective = f
 
-    local_opt = Opt(:LN_COBYLA, 2*npts)
-    local_opt.initial_step = [fill(step[1], npts); fill(step[2], npts)]
-    local_opt.maxeval = neval ÷ 10
+    # TEMP? (to ensure we stop only based on maxeval)
+    # opt.ftol_rel = 1e-16
+    # opt.ftol_abs = 1e-16
+    # opt.xtol_rel = 1e-16
+    # opt.xtol_abs = 1e-16
 
-    opt.local_optimizer = local_opt
+    if use_local_opt
+        local_opt = Opt(:LN_COBYLA, 2*npts)
+        local_opt.initial_step = [fill(step[1], npts); fill(step[2], npts)]
+        local_opt.maxeval = neval ÷ 10
+
+        opt.local_optimizer = local_opt
+    end
 
     x0 = [filter(!isnan, xb(:h)); filter(!isnan, xb(:b))]
 
@@ -44,7 +52,7 @@ function nlopt_estimate(f, xb; xmin=(65, 0.2), xmax=(90, 1.0), step=(2.0, 0.05),
     xest(:h)[.!isnan.(xb(:h))] .= minx[1:npts]
     xest(:b)[.!isnan.(xb(:b))] .= minx[npts+1:end]
 
-    return minf, xest, ret
+    return minf, xest, ret, opt
 end
 
 """
