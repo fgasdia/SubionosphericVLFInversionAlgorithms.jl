@@ -164,7 +164,7 @@ function model_observation(hbfcn, tx, rx, datetime; pathstep=100e3)
 end
 
 """
-    model(itp, x, paths, datetime; pathstep=100e3, lwpc=true, numexe=16)
+    model(itp, x, paths, datetime; pathstep=100e3, lwpc=true, numexe=16, sleeptime=0.1)
 
 Return the model observations `(amps, phases)` for spatial interpolation method `itp` and
 `datetime`.
@@ -175,7 +175,9 @@ and the second half is ``β``.
 Uses LWPC as the forward model if `lwpc` is true; otherwise, uses LongwaveModePropagator.jl.
 `numexe` specifies the number of LWPC executables to use.
 """
-function model(itp::GeoStatsInterpolant, x, paths, datetime; pathstep=100e3, lwpc=true, numexe=16)
+function model(itp::GeoStatsInterpolant, x, paths, datetime;
+    pathstep=100e3, lwpc=true, numexe=16, sleeptime=0.1)
+
     npts = length(x) ÷ 2
     hprimes = x[1:npts]
     betas = x[npts+1:end]
@@ -196,7 +198,7 @@ function model(itp::GeoStatsInterpolant, x, paths, datetime; pathstep=100e3, lwp
 
     if lwpc
         computejob = LocalParallel("estimate", ".", "C:\\LWPCv21\\lwpm.exe", numexe, 90)
-        output = LWPC.run(batch, computejob; savefile=false)
+        output = LWPC.run(batch, computejob; savefile=false, sleeptime=sleeptime)
     else
         output = LMP.buildrun(batch; params=LMPParams(approxsusceptibility=true))
     end
@@ -218,10 +220,12 @@ function model(itp::GeoStatsInterpolant, x, paths, datetime; pathstep=100e3, lwp
 
     return amps, phases
 end
-model(itp::GeoStatsInterpolant, x::KeyedArray, paths, datetime; pathstep=100e3, lwpc=true, numexe=16) =
-    model(itp, [filter(!isnan, x(:h)); filter(!isnan, x(:b))], paths, datetime; pathstep, lwpc, numexe)
+model(itp::GeoStatsInterpolant, x::KeyedArray, paths, datetime; pathstep=100e3, lwpc=true, numexe=16, sleeptime=0.1) =
+    model(itp, [filter(!isnan, x(:h)); filter(!isnan, x(:b))], paths, datetime; pathstep, lwpc, numexe, sleeptime)
 
-function model(itp::ScatteredInterpolant, x, paths, datetime; pathstep=100e3, lwpc=true, numexe=16)
+function model(itp::ScatteredInterpolant, x, paths, datetime;
+    pathstep=100e3, lwpc=true, numexe=16, sleeptime=0.1)
+
     hprimes = x(:h)
     betas = x(:b)
 
@@ -242,7 +246,7 @@ function model(itp::ScatteredInterpolant, x, paths, datetime; pathstep=100e3, lw
 
     if lwpc
         computejob = LocalParallel("estimate", ".", "C:\\LWPCv21\\lwpm.exe", numexe, 90)
-        output = LWPC.run(batch, computejob; savefile=false)
+        output = LWPC.run(batch, computejob; savefile=false, sleeptime=sleeptime)
     else
         output = LMP.buildrun(batch; params=LMPParams(approxsusceptibility=true))
     end
@@ -265,7 +269,7 @@ function model(itp::ScatteredInterpolant, x, paths, datetime; pathstep=100e3, lw
 end
 
 """
-    model(hbfcn::Function, paths, datetime; pathstep=100e3, lwpc=true, numexe=16)
+    model(hbfcn::Function, paths, datetime; pathstep=100e3, lwpc=true, numexe=16, sleeptime=0.1)
 
 Use `hbfcn`, a function of `(lon, lat, datetime)`, to compute `(h′, β)` along each 
 vector of (transmitter, receiver) `paths`.
@@ -279,7 +283,9 @@ ionosphere estimation. `numexe` specifies the number of LWPC executables to use.
 
 See also: [`model_observation`](@ref)
 """
-function model(hbfcn::Function, paths, datetime; pathstep=100e3, lwpc=true, numexe=16) 
+function model(hbfcn::Function, paths, datetime;
+    pathstep=100e3, lwpc=true, numexe=16, sleeptime=0.1)
+
     batch = BatchInput{ExponentialInput}()
     batch.name = "estimate"
     batch.description = ""
@@ -294,7 +300,7 @@ function model(hbfcn::Function, paths, datetime; pathstep=100e3, lwpc=true, nume
 
     if lwpc
         computejob = LocalParallel("estimate", ".", "C:\\LWPCv21\\lwpm.exe", numexe, 90)
-        output = LWPC.run(batch, computejob; savefile=false)
+        output = LWPC.run(batch, computejob; savefile=false, sleeptime=sleeptime)
     else
         output = LMP.buildrun(batch; params=LMPParams(approxsusceptibility=true))
     end
