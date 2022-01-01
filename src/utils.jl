@@ -11,6 +11,11 @@ pathname(p) = p[1].name*"-"*p[2].name
 Compute the smallest angle `a - b` in radians if `deg=false`, otherwise degrees.
 """
 function phasediff(a, b; deg=false)
+    if isnan(a) || isnan(b)
+        # possible Julia bug: mod2pi(NaN) returns a number
+        return NaN
+    end
+    
     if deg
         a, b = deg2rad(a), deg2rad(b)
     end
