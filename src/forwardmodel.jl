@@ -221,14 +221,15 @@ function model(itp::GeoStatsInterpolant, x, paths, datetime;
     return amps, phases
 end
 model(itp::GeoStatsInterpolant, x::KeyedArray, paths, datetime; pathstep=100e3, lwpc=true, numexe=16, sleeptime=0.1) =
-    model(itp, [filter(!isnan, x(:h)); filter(!isnan, x(:b))], paths, datetime; pathstep, lwpc, numexe, sleeptime)
+    model(itp, [x(:h); x(:b)], paths, datetime; pathstep, lwpc, numexe, sleeptime)
 
 function model(itp::ScatteredInterpolant, x, paths, datetime;
     pathstep=100e3, lwpc=true, numexe=16, sleeptime=0.1)
 
-    hprimes = x(:h)
-    betas = x(:b)
-
+    npts = length(x) ÷ 2
+    hprimes = x[1:npts]
+    betas = x[npts+1:end]
+    
     hitp = ScatteredInterpolation.interpolate(itp.method, itp.coords, filter(!isnan, hprimes))
     bitp = ScatteredInterpolation.interpolate(itp.method, itp.coords, filter(!isnan, betas))
 
@@ -267,6 +268,8 @@ function model(itp::ScatteredInterpolant, x, paths, datetime;
 
     return amps, phases
 end
+model(itp::ScatteredInterpolant, x::KeyedArray, paths, datetime; pathstep=100e3, lwpc=true, numexe=16, sleeptime=0.1) =
+    model(itp, [x(:h); x(:b)], paths, datetime; pathstep, lwpc, numexe, sleeptime)
 
 """
     model(hbfcn::Function, paths, datetime; pathstep=100e3, lwpc=true, numexe=16, sleeptime=0.1)
