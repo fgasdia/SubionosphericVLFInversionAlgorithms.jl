@@ -269,7 +269,7 @@ function model(itp::ScatteredInterpolant, x, paths, datetime;
     return amps, phases
 end
 model(itp::ScatteredInterpolant, x::KeyedArray, paths, datetime; pathstep=100e3, lwpc=true, numexe=16, sleeptime=0.1) =
-    model(itp, [x(:h); x(:b)], paths, datetime; pathstep, lwpc, numexe, sleeptime)
+    model(itp, [vec(x(:h)); vec(x(:b))], paths, datetime; pathstep, lwpc, numexe, sleeptime)
 
 """
     model(hbfcn::Function, paths, datetime; pathstep=100e3, lwpc=true, numexe=16, sleeptime=0.1)
