@@ -221,7 +221,7 @@ function model(itp::GeoStatsInterpolant, x, paths, datetime;
     return amps, phases
 end
 model(itp::GeoStatsInterpolant, x::KeyedArray, paths, datetime; pathstep=100e3, lwpc=true, numexe=16, sleeptime=0.1) =
-    model(itp, [x(:h); x(:b)], paths, datetime; pathstep, lwpc, numexe, sleeptime)
+    model(itp, [filter(!isnan, x(:h)); filter(!isnan, x(:b))], paths, datetime; pathstep, lwpc, numexe, sleeptime)
 
 function model(itp::ScatteredInterpolant, x, paths, datetime;
     pathstep=100e3, lwpc=true, numexe=16, sleeptime=0.1)
