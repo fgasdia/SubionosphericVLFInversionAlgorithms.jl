@@ -1,5 +1,5 @@
 using Test, Random, DelimitedFiles, Dates, LinearAlgebra
-using AxisKeys, Distributions, Proj4
+using AxisKeys, Distributions, Proj
 using ScatteredInterpolation, GeoStats
 using LongwaveModePropagator
 using UnPack

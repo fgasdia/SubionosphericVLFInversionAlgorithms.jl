@@ -61,9 +61,10 @@ to this grid. We go out `2dr` instead of `1dr` to compensate for the fact that t
 distance may be larger than the projected `dr`.
 """
 function build_xygrid(west, east, south, north, fromproj=wgs84(), toproj=esri_102010(); dr=300e3)
-    bounds = [west north; east north; west south; east south]
-    pts = transform(fromproj, toproj, bounds)
-    (xmin, xmax), (ymin, ymax) = extrema(pts, dims=1)
+    trans = Proj.Transformation(fromproj, toproj)
+    pts = [trans(west, north), trans(east, north), trans(west, south), trans(east, south)]
+    xmin, xmax = extrema(getindex.(pts, 1))
+    ymin, ymax = extrema(getindex.(pts, 2))
 
     # add `dr` because otherwise end will be previous value that is a multiple of dr
     x_grid = range(xmin-2dr, xmax+2dr; step=dr)
@@ -80,7 +81,8 @@ Return the ``2 × n`` matrix of all grid points over ranges `x_grid`, `y_grid` w
 See also: [`build_xygrid`](@ref)
 """
 function densify(x_grid, y_grid)
-    return reshape(reinterpret(Float64, [(x, y) for x in x_grid for y in y_grid]), 2, :)
+    return [(x, y) for x in x_grid for y in y_grid]
+    # return reshape(reinterpret(Float64, [(x, y) for x in x_grid for y in y_grid]), 2, :)
 end
 
 """
@@ -193,9 +195,21 @@ compactlengthscale(σ) = σ/sqrt(0.3)
 """
     lonlatgrid_dists(lonlats)
 
-Compute distance in meters between every grid point in a matrix of `permutedims([lon lat])`.
+Compute distance in meters between every grid point in a matrix of `permutedims([lon lat])`
+or vector of lon, lat tuples.
 """
 function lonlatgrid_dists(lonlats)
+    N = length(lonlats)
+    distarr = Matrix{Float64}(undef, N, N)
+    for j in eachindex(lonlats)
+        for i in eachindex(lonlats)
+            distarr[i,j] = inverse(lonlats[j]..., lonlats[i]...).dist
+        end
+    end
+    return distarr
+end
+
+function lonlatgrid_dists(lonlats::Matrix)
     N = size(lonlats,2)
     distarr = Matrix{Float64}(undef, N, N)
     for j in axes(lonlats,2)
@@ -212,7 +226,7 @@ end
 Return a localization matrix of shape `(ngrid, npaths)` where `0.0` means the path does not
 affect the grid cell or `1.0` meaning the path does.
 
-`lonlats` is a dense matrix of longitudes and latitude points.
+`lonlats` is a vector of tuples of longitudes and latitude points.
 `paths` is a vector of (transmitter, receiver) tuples representing each propagation path.
 
 `diamonds` is a vector of vectors of points describing the localization pattern around each
@@ -236,7 +250,7 @@ region to the south in the northern hemisphere (it should really be a concave hu
 See also: [`obs2grid_diamondcircle`](@ref)
 """
 function obs2grid_diamondpill(lonlats, paths; overshoot=200e3, halfwidth=300e3)
-    ngrid = size(lonlats, 2)
+    ngrid = length(lonlats)
     npaths = length(paths)
 
     arc = 0:15:360-15
@@ -313,8 +327,8 @@ function obs2grid_diamondpill(lonlats, paths; overshoot=200e3, halfwidth=300e3)
         diamond = LibGEOS.convexhull(LibGEOS.MultiPoint(allpts))
 
         # This sets to 1 if the gridcell is within the diamond at all and 0 otherwise
-        for l in axes(lonlats,2)
-            pt = LibGEOS.Point(lonlats[1,l], lonlats[2,l])
+        for l in eachindex(lonlats)
+            pt = LibGEOS.Point(lonlats[l]...)
             localization[l,p] = LibGEOS.intersects(pt, diamond) ? 1 : 0
         end
 
@@ -332,7 +346,7 @@ end
 Return a localization matrix of shape `(ngrid, npaths)` where `0.0` means the path does not
 affect the grid cell or `1.0` meaning the path does.
 
-`lonlats` is a dense matrix of longitudes and latitude points.
+`lonlats` is a vector of tuples of longitudes and latitude points.
 `paths` is a vector of (transmitter, receiver) tuples representing each propagation path.
 
 `diamonds` is a vector of vectors of points describing the localization pattern around each
@@ -356,7 +370,7 @@ convex hull).
 See also: [`obs2grid_diamondpill`](@ref)
 """
 function obs2grid_diamondcircle(lonlats, paths; overshoot=200e3, halfwidth=300e3)
-    ngrid = size(lonlats, 2)
+    ngrid = length(lonlats)
     npaths = length(paths)
 
     localization = Matrix{Float64}(undef, ngrid, npaths)
@@ -454,8 +468,8 @@ function obs2grid_diamondcircle(lonlats, paths; overshoot=200e3, halfwidth=300e3
         diamond = LibGEOS.Polygon([allpts])
 
         # This sets to 1 if the gridcell is within the diamond at all and 0 otherwise
-        for l in axes(lonlats,2)
-            pt = LibGEOS.Point(lonlats[1,l], lonlats[2,l])
+        for l in eachindex(lonlats)
+            pt = LibGEOS.Point(lonlats[l]...)
             localization[l,p] = LibGEOS.contains(diamond, pt) ? 1 : 0
         end
 
@@ -485,7 +499,8 @@ function boundary_coords(paths)
     hull = LibGEOS.convexhull(mpts)
 
     # for plotting...
-    # pwpts = transform(wgs84, model_projection(), [getindex.(wpts,1) getindex.(wpts,2)])
+    # trans = Proj.Transformation(wgs84(), model_projection)
+    # pwpts = trans.(getindex.(wpts, 1), getindex.(wpts, 2))
 
     # Remove very close points
     hull = LibGEOS.simplify(hull, 0.1)
@@ -515,7 +530,7 @@ within `r` meters of each path.
 See also: [`localize_distance`](@ref)
 """
 function obs2grid_distance(lonlats, paths; r=200e3, pathstep=100e3)
-    ngrid = size(lonlats, 2)
+    ngrid = length(lonlats)
     npaths = length(paths)
 
     localization = trues(ngrid, npaths)
@@ -527,8 +542,8 @@ function obs2grid_distance(lonlats, paths; r=200e3, pathstep=100e3)
         # next waypoint after the transmitter. (`wpts[end]` is before the receiver)
         wpts = wpts[2:end]
 
-        for j in axes(lonlats,2)
-            lo, la = lonlats[1,j], lonlats[2,j]
+        for j in eachindex(lonlats)
+            lo, la = lonlats[j]
             dmin = Inf
             for i in eachindex(wpts)
                 d = inverse(lo, la, wpts[i].lon, wpts[i].lat).dist
@@ -555,7 +570,7 @@ Like `obs2grid_distance` except it  returns actual distances instead of the resu
 TODO: combine these two functions.
 """
 function obs2grid_distances(lonlats, paths; pathstep=100e3)
-    ngrid = size(lonlats, 2)
+    ngrid = length(lonlats)
     npaths = length(paths)
 
     distances = Matrix{Float64}(undef, ngrid, npaths)
@@ -567,8 +582,8 @@ function obs2grid_distances(lonlats, paths; pathstep=100e3)
         # next waypoint after the transmitter. (`wpts[end]` is before the receiver)
         wpts = wpts[2:end]
 
-        for j in axes(lonlats,2)
-            lo, la = lonlats[1,j], lonlats[2,j]
+        for j in eachindex(lonlats)
+            lo, la = lonlats[j]
             dmin = Inf
             for i in eachindex(wpts)
                 d = inverse(lo, la, wpts[i].lon, wpts[i].lat).dist
@@ -591,8 +606,8 @@ Set `localization` entries to `0` if the corresponding `lonlat` entry is outside
 rectangular region bounded by `west`, `east`, `south`, `north`.
 """
 function filterbounds!(localization, lonlat, west, east, south, north)
-    for i in axes(lonlat, 2)
-        if lonlat[1,i] < west || lonlat[1,i] > east || lonlat[2,i] < south || lonlat[2,i] > north
+    for i in eachindex(lonlat)
+        if lonlat[i][1] < west || lonlat[i][1] > east || lonlat[i][2] < south || lonlat[i][2] > north
             localization[i,:] .= 0
         end
     end
@@ -626,6 +641,16 @@ Return the median WGS84 distance in meters between dense matrix of longitude, la
 in ``2 × n`` `lola`.
 """
 function mediandr(lola)
+    dists = Vector{Float64}(undef, length(lola)÷2)
+    idx = 1
+    for i = 1:2:length(lola)-1
+        dists[idx] = inverse(lola[i]..., lola[i+1]...).dist
+        idx += 1
+    end
+    return median(dists)
+end
+
+function mediandr(lola::Matrix)
     dists = Vector{Float64}(undef, size(lola,2)÷2)
     idx = 1
     for i = 1:2:size(lola,2)-1

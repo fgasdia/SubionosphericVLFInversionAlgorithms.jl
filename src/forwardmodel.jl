@@ -67,9 +67,8 @@ function model_observation(itp::GeoStatsInterpolant, geox, tx, rx, datetime; pat
     input, wpts = _model_observation(tx, rx; pathstep)
 
     # Projected wpts
-    pts = PointSet(permutedims(
-        transform(wgs84(), itp.projection, [getindex.(wpts, :lon) getindex.(wpts, :lat)])
-    ))
+    trans = Proj.Transformation(wgs84(), itp.projection)
+    pts = PointSet(trans.(getindex.(wpts, :lon), getindex.(wpts, :lat)))
 
     problem = EstimationProblem(geox, pts, (:h, :b))
     solution = solve(problem, itp.method)
@@ -104,9 +103,8 @@ function model_observation(itp::ScatteredInterpolant, hitp, bitp, tx, rx, dateti
     input, wpts = _model_observation(tx, rx; pathstep)
 
     # Projected wpts
-    pts = permutedims(
-        transform(wgs84(), itp.projection, [getindex.(wpts, :lon) getindex.(wpts, :lat)])
-    )
+    trans = Proj.Transformation(wgs84(), itp.projection)
+    pts = PointSet(trans.(getindex.(wpts, :lon), getindex.(wpts, :lat)))
 
     geoaz = inverse(tx.longitude, tx.latitude, rx.longitude, rx.latitude).azi
 
