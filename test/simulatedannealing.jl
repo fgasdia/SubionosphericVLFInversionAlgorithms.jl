@@ -28,7 +28,7 @@ function test_rosenbrock()
     @test Ebest == last(Eprogress)
 
     # filename
-    @info "  Writing progress to file. This may take a while..."
+    @info "  Writing progress to file..."
     fname, _ = mktemp()
     xbest, Ebest, xprogress, Eprogress = vfsa(rosenbrock, x0, [-5, -5], [5, 5], T, T; NK=400, NT=50,
         saveprogress=:all, filename=fname)

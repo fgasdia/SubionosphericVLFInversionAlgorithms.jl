@@ -111,7 +111,7 @@ function dense_grid(itp::GeoStatsInterpolant, values, x_grid, y_grid)
     :v in itp.method.varnames ||
         throw(ArgumentError("`itp.method` should be defined for variable `:v` when passed to `dense_grid`."))
 
-    geox = georef((v=filter(!isnan, values),), PointSet(itp.coords))
+    geox = georef((v=filter(!isnan, values),), itp.coords)
 
     xy_grid = densify(x_grid, y_grid)
 
@@ -120,7 +120,7 @@ function dense_grid(itp::GeoStatsInterpolant, values, x_grid, y_grid)
 
     vgrid = Matrix{Float64}(undef, length(y_grid), length(x_grid))
     for i in axes(xy_grid,2)
-        vgrid[i] = solution[:v][i]
+        vgrid[i] = solution.v[i]
     end
 
     return vgrid
@@ -319,7 +319,7 @@ function obs2grid_diamondpill(lonlats, paths; overshoot=200e3, halfwidth=300e3)
         end
 
         # push!(diamonds, diamond)
-        push!(diamonds, LibGEOS.coordinates(LibGEOS.boundary(diamond)))
+        push!(diamonds, LibGEOS.GeoInterface.coordinates(LibGEOS.boundary(diamond)))
     end
 
     return localization, diamonds
@@ -491,7 +491,7 @@ function boundary_coords(paths)
     hull = LibGEOS.simplify(hull, 0.1)
 
     # Get GCP pts along convex hull (boundary)
-    hull_coords = only(LibGEOS.coordinates(hull))::Vector{Vector{Float64}}
+    hull_coords = only(LibGEOS.GeoInterface.coordinates(hull))::Vector{Vector{Float64}}
     gcp_boundary = Vector{Tuple{Float64,Float64}}()
     for i in 1:length(hull_coords)-1
         h = hull_coords[i]

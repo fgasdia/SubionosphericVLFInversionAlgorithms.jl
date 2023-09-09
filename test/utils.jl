@@ -17,19 +17,19 @@ function test_totalvariation()
 
     μh, μb = 1, 1
     αh, αb = 0, 0
-    ϕ = totalvariation(itp, x, μh, μb, αh, αb; localizationfcn)
+    ϕ = SIA.totalvariation(itp, x, μh, μb, αh, αb; localizationfcn)
     @test ϕ ≈ 0 atol=1e-8
-    ϕ = totalvariation(itp, x, μh, μb, αh, αb; localizationfcn=nothing)
+    ϕ = SIA.totalvariation(itp, x, μh, μb, αh, αb; localizationfcn=nothing)
     @test ϕ ≈ 0 atol=1e-8
 
     xc = copy(x)
     xc(:h) .= rand(size(xc(:h))...)
     xc(:b) .= rand(size(xc(:b))...)
-    ϕ = totalvariation(itp, xc, μh, μb, αh, αb; localizationfcn)
+    ϕ = SIA.totalvariation(itp, xc, μh, μb, αh, αb; localizationfcn)
     @test ϕ > 0
-    ϕv = totalvariation(itp, [vec(xc(:h)); vec(xc(:b))], μh, μb, αh, αb; localizationfcn)
+    ϕv = SIA.totalvariation(itp, [vec(xc(:h)); vec(xc(:b))], μh, μb, αh, αb; localizationfcn)
     @test ϕv ≈ ϕ
-    ϕ2 = totalvariation(itp, xc, μh, μb, αh, αb; localizationfcn=nothing)
+    ϕ2 = SIA.totalvariation(itp, xc, μh, μb, αh, αb; localizationfcn=nothing)
     @test ϕ2 > 0
     @test !isapprox(ϕ, ϕ2; atol=0.1)
 end
