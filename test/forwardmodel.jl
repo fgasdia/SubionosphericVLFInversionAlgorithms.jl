@@ -43,7 +43,7 @@ function test_models()
     )
     itp = GeoStatsInterpolant(solver, esri_102010(), xygrid)
 
-    geox = georef((h=hprimes, b=betas), PointSet(itp.coords))
+    geox = georef((h=vec(hprimes), b=vec(betas)), itp.coords)
     input = SIA.model_observation(itp, geox, tx, rx, dt)
 
     # Make sure fields are filled in appropriately

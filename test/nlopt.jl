@@ -88,7 +88,7 @@ function test_nlopt(scenario)
 
     μh, μb = 1, 1
     αh, αb = 0, 0
-    ϕ1(x) = totalvariation(itp, x, μh, μb, αh, αb; localizationfcn)
+    ϕ1(x) = SIA.totalvariation(itp, x, μh, μb, αh, αb; localizationfcn)
 
     # ## Objective function
     val = objective(itp, x, y, paths, dt;
@@ -106,7 +106,7 @@ function test_nlopt(scenario)
 
     μh, μb = 10, 100
     αh, αb = 1.0, 0.1
-    ϕ2(x) = totalvariation(itp, x, μh, μb, αh, αb; localizationfcn)
+    ϕ2(x) = SIA.totalvariation(itp, x, μh, μb, αh, αb; localizationfcn)
 
     f(x, grad) = objective(itp, x, y, paths, dt;
         ρ, ϕ=ϕ2, σamp, σphase, pathstep, datatypes=(:amp, :phase))

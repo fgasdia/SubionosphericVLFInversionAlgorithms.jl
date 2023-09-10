@@ -82,8 +82,8 @@ function model_observation(itp::GeoStatsInterpolant, geox, tx, rx, datetime; pat
         ground = GROUND[LMPTools.get_groundcode(lat, lon)]
 
         input.segment_ranges[i] = dist
-        input.hprimes[i] = solution[:h][i]
-        input.betas[i] = solution[:b][i]
+        input.hprimes[i] = solution.h[i]
+        input.betas[i] = solution.b[i]
         input.b_mags[i] = bfield.B
         input.b_dips[i] = LMP.dip(bfield)
         input.b_azs[i] = LMP.azimuth(bfield)
@@ -210,8 +210,8 @@ function model(itp::GeoStatsInterpolant, x, paths, datetime;
         o = output.outputs[i]
 
         # NOTE: step size here should match `output_ranges` step in `model_observation`!
-        aitp = LinearInterpolation(0:5e3:last(o.output_ranges), o.amplitude)
-        pitp = LinearInterpolation(0:5e3:last(o.output_ranges), o.phase)
+        aitp = linear_interpolation(0:5e3:last(o.output_ranges), o.amplitude)
+        pitp = linear_interpolation(0:5e3:last(o.output_ranges), o.phase)
         amps[i] = aitp(d)
         phases[i] = pitp(d)
     end
@@ -258,8 +258,8 @@ function model(itp::ScatteredInterpolant, x, paths, datetime;
         o = output.outputs[i]
 
         # NOTE: step size here should match `output_ranges` step in `model_observation`!
-        aitp = LinearInterpolation(0:5e3:last(o.output_ranges), o.amplitude)
-        pitp = LinearInterpolation(0:5e3:last(o.output_ranges), o.phase)
+        aitp = linear_interpolation(0:5e3:last(o.output_ranges), o.amplitude)
+        pitp = linear_interpolation(0:5e3:last(o.output_ranges), o.phase)
         amps[i] = aitp(d)
         phases[i] = pitp(d)
     end
@@ -313,11 +313,11 @@ function model(hbfcn::Function, paths, datetime;
         d = range(tx, rx)
         o = output.outputs[i]
 
-        # Using LMP we could skip the LinearInterpolation and compute the field at exactly
+        # Using LMP we could skip the linear_interpolation and compute the field at exactly
         # the correct distance, but for consistency with LWPC we'll interpolate the output.
         # NOTE: step size here should match `output_ranges` step in `model_observation`!
-        aitp = LinearInterpolation(0:5e3:last(o.output_ranges), o.amplitude)
-        pitp = LinearInterpolation(0:5e3:last(o.output_ranges), o.phase)
+        aitp = linear_interpolation(0:5e3:last(o.output_ranges), o.amplitude)
+        pitp = linear_interpolation(0:5e3:last(o.output_ranges), o.phase)
         amps[i] = aitp(d)
         phases[i] = pitp(d)
     end
