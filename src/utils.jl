@@ -109,7 +109,8 @@ function tikhonov_gradient(itp, m, λh, λb; localizationfcn=nothing, step=100e3
 
     if !isnothing(localizationfcn)
         trans = Proj.Transformation(itp.projection, wgs84())
-        lonlats = trans.(densify(x_grid, y_grid))
+        xy_grid = densify(x_grid, y_grid)
+        lonlats = trans.(parent(parent(xy_grid)))  # undo reshape reinterpret to get vector of tuples
         localization = localizationfcn(lonlats)
         h_grid[.!localization] .= NaN
         b_grid[.!localization] .= NaN
@@ -153,7 +154,8 @@ function totalvariation(itp, m, μh, μb, αh, αb; localizationfcn=nothing, ste
 
     if !isnothing(localizationfcn)
         trans = Proj.Transformation(itp.projection, wgs84())
-        lonlats = trans.(densify(x_grid, y_grid))
+        xy_grid = densify(x_grid, y_grid)
+        lonlats = trans.(parent(parent(xy_grid)))  # undo reshape reinterpret to get vector of tuples
         localization = localizationfcn(permutedims(lonlats))
         h_grid[.!localization] .= NaN
         b_grid[.!localization] .= NaN

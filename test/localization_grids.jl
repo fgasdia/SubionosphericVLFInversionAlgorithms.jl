@@ -43,7 +43,7 @@ function test_grids()
     # Localization
 
     trans = Proj.Transformation(esri_102010(), wgs84())
-    lola = trans.(xy_grid)
+    lola = trans.(parent(parent(xy_grid)))  # parent undoes the reshape reinterpret to get a vector of tuples
     distarr = lonlatgrid_dists(lola)
     @test size(distarr) == (length(lola), length(lola))
     @test iszero(diag(distarr))

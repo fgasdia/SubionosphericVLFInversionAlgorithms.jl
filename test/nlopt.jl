@@ -22,7 +22,7 @@ function nlopt_setup(scenario)
     # To compute the localization below, we need a dense grid of lon/lat grid points.
     xy_grid1 = densify(x_grid1, y_grid1)
     trans = Proj.Transformation(modelproj, wgs84())
-    lola = trans.(xy_grid1)
+    lola = trans.(parent(parent(xy_grid1)))
 
     x = KeyedArray(Array{Float64,3}(undef, 2, length(y_grid1), length(x_grid1)),
             field=[:h, :b], y=y_grid1, x=x_grid1)

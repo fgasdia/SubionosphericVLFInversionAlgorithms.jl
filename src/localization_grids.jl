@@ -81,8 +81,8 @@ Return the ``2 × n`` matrix of all grid points over ranges `x_grid`, `y_grid` w
 See also: [`build_xygrid`](@ref)
 """
 function densify(x_grid, y_grid)
-    return [(x, y) for x in x_grid for y in y_grid]
-    # return reshape(reinterpret(Float64, [(x, y) for x in x_grid for y in y_grid]), 2, :)
+    # return [(x, y) for x in x_grid for y in y_grid]
+    return reshape(reinterpret(Float64, [(x, y) for x in x_grid for y in y_grid]), 2, :)
 end
 
 """

@@ -13,7 +13,7 @@ function letkf_setup(scenario)
     # grid point to every other grid point.
     xy_grid = densify(x_grid, y_grid)
     trans = Proj.Transformation(modelproj, wgs84())
-    lola = trans.(xy_grid)
+    lola = trans.(parent(parent(xy_grid)))
 
     # ratio of true distance to model distance
     # multiplying by `modelscale` converts a modelproj distance to a WGS84 distance

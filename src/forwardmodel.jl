@@ -115,8 +115,8 @@ function model_observation(itp::ScatteredInterpolant, hitp, bitp, tx, rx, dateti
         ground = GROUND[LMPTools.get_groundcode(lat, lon)]
 
         input.segment_ranges[i] = dist
-        input.hprimes[i] = only(ScatteredInterpolation.evaluate(hitp, pts[:,i]))
-        input.betas[i] = only(ScatteredInterpolation.evaluate(bitp, pts[:,i]))
+        input.hprimes[i] = only(ScatteredInterpolation.evaluate(hitp, pts[i].coords))
+        input.betas[i] = only(ScatteredInterpolation.evaluate(bitp, pts[i].coords))
         input.b_mags[i] = bfield.B
         input.b_dips[i] = LMP.dip(bfield)
         input.b_azs[i] = LMP.azimuth(bfield)
