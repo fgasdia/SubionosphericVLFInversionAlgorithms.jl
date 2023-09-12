@@ -11,8 +11,9 @@ function letkf_setup(scenario)
 
     # To compute the covariance relation below, we need the dense matrix of distances from each
     # grid point to every other grid point.
-    xy_grid = collect(densify(x_grid, y_grid))
-    lola = permutedims(transform(modelproj, wgs84(), permutedims(xy_grid)))
+    xy_grid = densify(x_grid, y_grid)
+    trans = Proj.Transformation(modelproj, wgs84())
+    lola = trans.(parent(parent(xy_grid)))
 
     # ratio of true distance to model distance
     # multiplying by `modelscale` converts a modelproj distance to a WGS84 distance

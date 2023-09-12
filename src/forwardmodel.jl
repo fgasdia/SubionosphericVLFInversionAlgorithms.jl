@@ -67,9 +67,8 @@ function model_observation(itp::GeoStatsInterpolant, geox, tx, rx, datetime; pat
     input, wpts = _model_observation(tx, rx; pathstep)
 
     # Projected wpts
-    pts = PointSet(permutedims(
-        transform(wgs84(), itp.projection, [getindex.(wpts, :lon) getindex.(wpts, :lat)])
-    ))
+    trans = Proj.Transformation(wgs84(), itp.projection)
+    pts = PointSet(trans.(getindex.(wpts, :lon), getindex.(wpts, :lat)))
 
     problem = EstimationProblem(geox, pts, (:h, :b))
     solution = solve(problem, itp.method)
@@ -104,9 +103,8 @@ function model_observation(itp::ScatteredInterpolant, hitp, bitp, tx, rx, dateti
     input, wpts = _model_observation(tx, rx; pathstep)
 
     # Projected wpts
-    pts = permutedims(
-        transform(wgs84(), itp.projection, [getindex.(wpts, :lon) getindex.(wpts, :lat)])
-    )
+    trans = Proj.Transformation(wgs84(), itp.projection)
+    pts = PointSet(trans.(getindex.(wpts, :lon), getindex.(wpts, :lat)))
 
     geoaz = inverse(tx.longitude, tx.latitude, rx.longitude, rx.latitude).azi
 
@@ -117,8 +115,8 @@ function model_observation(itp::ScatteredInterpolant, hitp, bitp, tx, rx, dateti
         ground = GROUND[LMPTools.get_groundcode(lat, lon)]
 
         input.segment_ranges[i] = dist
-        input.hprimes[i] = only(ScatteredInterpolation.evaluate(hitp, pts[:,i]))
-        input.betas[i] = only(ScatteredInterpolation.evaluate(bitp, pts[:,i]))
+        input.hprimes[i] = only(ScatteredInterpolation.evaluate(hitp, pts[i].coords))
+        input.betas[i] = only(ScatteredInterpolation.evaluate(bitp, pts[i].coords))
         input.b_mags[i] = bfield.B
         input.b_dips[i] = LMP.dip(bfield)
         input.b_azs[i] = LMP.azimuth(bfield)

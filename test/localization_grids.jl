@@ -42,9 +42,10 @@ function test_grids()
 
     # Localization
 
-    lola = permutedims(transform(esri_102010(), wgs84(), permutedims(xy_grid)))
+    trans = Proj.Transformation(esri_102010(), wgs84())
+    lola = trans.(parent(parent(xy_grid)))  # parent undoes the reshape reinterpret to get a vector of tuples
     distarr = lonlatgrid_dists(lola)
-    @test size(distarr) == (size(lola,2), size(lola,2))
+    @test size(distarr) == (length(lola), length(lola))
     @test iszero(diag(distarr))
 
     mdr = mediandr(lola)
@@ -59,7 +60,7 @@ function test_grids()
     @test compactlengthscale(gaussianstddev(c)) ≈ c
 
     localization, _ = obs2grid_diamondpill(lola, paths)
-    @test size(localization) == (size(lola,2), length(paths))
+    @test size(localization) == (length(lola), length(paths))
     # heatmap(x_grid, y_grid, reshape(localization, (length(y_grid), length(x_grid))))
 
     locmask = anylocal(localization)
