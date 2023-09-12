@@ -2,7 +2,7 @@
 
 julia_version = "1.9.2"
 manifest_format = "2.0"
-project_hash = "7ebb32fa0b19f0d7b2fc73741ca4103073c2c681"
+project_hash = "56c9cb561c3acb1f5bb7c163470fe16522f2cd4d"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "d68758475ff90600488eb975b5ac222709a7dd6f"
@@ -24,24 +24,6 @@ weakdeps = ["ChainRulesCore", "Test"]
 git-tree-sha1 = "faa260e4cb5aba097a73fab382dd4b5819d8ec8c"
 uuid = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
 version = "0.4.4"
-
-[[deps.Accessors]]
-deps = ["CompositionsBase", "ConstructionBase", "Dates", "InverseFunctions", "LinearAlgebra", "MacroTools", "Requires", "Test"]
-git-tree-sha1 = "954634616d5846d8e216df1298be2298d55280b2"
-uuid = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
-version = "0.1.32"
-
-    [deps.Accessors.extensions]
-    AccessorsAxisKeysExt = "AxisKeys"
-    AccessorsIntervalSetsExt = "IntervalSets"
-    AccessorsStaticArraysExt = "StaticArrays"
-    AccessorsStructArraysExt = "StructArrays"
-
-    [deps.Accessors.weakdeps]
-    AxisKeys = "94b1ba4f-4ee9-5380-92f1-94cde586c3c5"
-    IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
-    StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-    StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra", "Requires"]
@@ -296,10 +278,12 @@ version = "1.0.5+0"
 git-tree-sha1 = "802bb88cd69dfd1509f6670416bd4434015693ad"
 uuid = "a33af91c-f02d-484b-be07-31d278c5ca2b"
 version = "0.1.2"
-weakdeps = ["InverseFunctions"]
 
     [deps.CompositionsBase.extensions]
     CompositionsBaseInverseFunctionsExt = "InverseFunctions"
+
+    [deps.CompositionsBase.weakdeps]
+    InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
 
 [[deps.ComputationalResources]]
 git-tree-sha1 = "52cb3ec90e8a8bea0e62e275ba577ad0f74821f7"
@@ -829,12 +813,6 @@ weakdeps = ["Statistics"]
     [deps.IntervalSets.extensions]
     IntervalSetsStatisticsExt = "Statistics"
 
-[[deps.InverseFunctions]]
-deps = ["Test"]
-git-tree-sha1 = "68772f49f54b479fa88ace904f6127f0a3bb2e46"
-uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
-version = "0.1.12"
-
 [[deps.InvertedIndices]]
 git-tree-sha1 = "0dc7b50b8d436461be01300fd8cd45aa0274b038"
 uuid = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
@@ -1270,11 +1248,6 @@ git-tree-sha1 = "963b004d15216f8129f6c0f7d187efa136570be0"
 uuid = "429524aa-4258-5aef-a3af-852621145aeb"
 version = "1.7.7"
 
-[[deps.OptionalData]]
-git-tree-sha1 = "d047cc114023e12292533bb822b45c23cb51d310"
-uuid = "fbd9d27c-2d1c-5c1c-99f2-7497d746985d"
-version = "1.0.0"
-
 [[deps.OrderedCollections]]
 git-tree-sha1 = "2e73fe17cac3c62ad1aebe70d44c963c3cfdc3e3"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
@@ -1599,29 +1572,11 @@ git-tree-sha1 = "81f7d934b52b2441f7b44520bd982fdb3607b0da"
 uuid = "76ed43ae-9a5d-5a62-8c75-30186b810ce8"
 version = "3.43.0+0"
 
-[[deps.SatelliteToolbox]]
-deps = ["Dates", "Reexport", "SatelliteToolboxAtmosphericModels", "SatelliteToolboxBase", "SatelliteToolboxCelestialBodies", "SatelliteToolboxGeomagneticField", "SatelliteToolboxGravityModels", "SatelliteToolboxPropagators", "SatelliteToolboxSgp4", "SatelliteToolboxTle", "SatelliteToolboxTransformations"]
-git-tree-sha1 = "ff31f30cdff20266c3e7dd4786fa9eaa5ca2ca36"
-uuid = "6ac157d9-b43d-51bb-8fab-48bf53814f4a"
-version = "0.12.0"
-
-[[deps.SatelliteToolboxAtmosphericModels]]
-deps = ["Accessors", "Crayons", "PolynomialRoots", "Printf", "Reexport", "SatelliteToolboxBase", "SatelliteToolboxCelestialBodies", "SatelliteToolboxLegendre", "SpaceIndices"]
-git-tree-sha1 = "ec25599402edb6fd0afd8e7e572e26c35494d9e9"
-uuid = "5718ef0a-a30f-426d-bcd9-4cf31dd12909"
-version = "0.1.1"
-
 [[deps.SatelliteToolboxBase]]
 deps = ["Crayons", "Dates", "LinearAlgebra", "PrecompileTools", "Printf", "ReferenceFrameRotations", "StaticArrays"]
 git-tree-sha1 = "3f05208953c53b2c13c418cd43cbba589ef57c37"
 uuid = "9e17983a-0463-41a7-9a16-1682db6d8b66"
 version = "0.3.0"
-
-[[deps.SatelliteToolboxCelestialBodies]]
-deps = ["Dates", "Reexport", "SatelliteToolboxBase", "StaticArrays"]
-git-tree-sha1 = "c366cdeb0301d97cd1ff9cb36497ad0eb873e13c"
-uuid = "b0edd99f-a7ca-4aa6-9a1e-a53e8f506046"
-version = "0.1.1"
 
 [[deps.SatelliteToolboxGeomagneticField]]
 deps = ["LinearAlgebra", "ReferenceFrameRotations", "SatelliteToolboxLegendre", "SatelliteToolboxTransformations", "StaticArrays"]
@@ -1629,34 +1584,10 @@ git-tree-sha1 = "8d0329074d41c692bd60b0a818304dda731405b7"
 uuid = "9fc549ba-b5d7-49a2-b268-8171e5fb6e89"
 version = "0.1.0"
 
-[[deps.SatelliteToolboxGravityModels]]
-deps = ["Crayons", "Dates", "Downloads", "ReferenceFrameRotations", "SatelliteToolboxBase", "SatelliteToolboxLegendre", "Scratch", "StaticArrays"]
-git-tree-sha1 = "a145726bc306d2d928b3069bda25b6ebccd0dea5"
-uuid = "bd9e9728-6f7b-4d28-9e50-c765cb1b7c8c"
-version = "0.1.2"
-
 [[deps.SatelliteToolboxLegendre]]
 git-tree-sha1 = "8151c3d6e18e6b1e0417960f5e44286b722e033a"
 uuid = "7fa26607-a272-47b2-9aa2-a6c1d419d9d2"
 version = "1.0.1"
-
-[[deps.SatelliteToolboxPropagators]]
-deps = ["Crayons", "Dates", "LinearAlgebra", "PrecompileTools", "Printf", "Reexport", "SatelliteToolboxBase", "SatelliteToolboxSgp4", "SatelliteToolboxTle", "StaticArrays"]
-git-tree-sha1 = "c45953b08d316432ddc168bc15df0a3a2f76518e"
-uuid = "c2b69894-ea78-4e2b-9ba6-cedbbc3d14d7"
-version = "0.3.0"
-
-[[deps.SatelliteToolboxSgp4]]
-deps = ["Crayons", "Dates", "LinearAlgebra", "PrecompileTools", "Printf", "Reexport", "SatelliteToolboxBase", "SatelliteToolboxTle", "StaticArrays"]
-git-tree-sha1 = "66b246e63b6e00a60861a55110361c263994fa17"
-uuid = "ba14ac17-bfc9-4710-a76f-b32930ef2339"
-version = "2.1.2"
-
-[[deps.SatelliteToolboxTle]]
-deps = ["Crayons", "Dates", "Downloads", "PrecompileTools", "Printf", "URIs"]
-git-tree-sha1 = "0bf1d32269942154d6289ac664e0e1b528eaf664"
-uuid = "7ff27aeb-5fff-4337-a9ee-a9fe6b7ed35e"
-version = "1.0.4"
 
 [[deps.SatelliteToolboxTransformations]]
 deps = ["Crayons", "Dates", "DelimitedFiles", "Downloads", "Interpolations", "LinearAlgebra", "Reexport", "ReferenceFrameRotations", "SatelliteToolboxBase", "Scratch", "StaticArrays"]
@@ -1767,12 +1698,6 @@ deps = ["DataStructures"]
 git-tree-sha1 = "c60ec5c62180f27efea3ba2908480f8055e17cee"
 uuid = "a2af1166-a08f-5f64-846c-94a0d3cef48c"
 version = "1.1.1"
-
-[[deps.SpaceIndices]]
-deps = ["Dates", "DelimitedFiles", "OptionalData", "Reexport", "Scratch"]
-git-tree-sha1 = "0329173419328166fd0eae5ec92fa40f98f19a79"
-uuid = "5a540a4e-639f-452a-b107-23ea09ed4d36"
-version = "1.1.0"
 
 [[deps.SparseArrays]]
 deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
@@ -1888,11 +1813,14 @@ deps = ["HypergeometricFunctions", "IrrationalConstants", "LogExpFunctions", "Re
 git-tree-sha1 = "f625d686d5a88bcd2b15cd81f18f98186fdc0c9a"
 uuid = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 version = "1.3.0"
-weakdeps = ["ChainRulesCore", "InverseFunctions"]
 
     [deps.StatsFuns.extensions]
     StatsFunsChainRulesCoreExt = "ChainRulesCore"
     StatsFunsInverseFunctionsExt = "InverseFunctions"
+
+    [deps.StatsFuns.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
 
 [[deps.StrideArraysCore]]
 deps = ["ArrayInterface", "CloseOpenIntervals", "IfElse", "LayoutPointers", "ManualMemory", "SIMDTypes", "Static", "StaticArrayInterface", "ThreadingUtilities"]
@@ -2044,11 +1972,6 @@ git-tree-sha1 = "d911ae4e642cf7d56b1165d29ef0a96ba3444ca9"
 uuid = "9d95f2ec-7b3d-5a63-8d20-e2491e220bb9"
 version = "1.4.3"
 
-[[deps.URIs]]
-git-tree-sha1 = "b7a5e99f24892b6824a954199a45e9ffcc1c70f0"
-uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
-version = "1.5.0"
-
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
 uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
@@ -2066,11 +1989,14 @@ deps = ["Dates", "LinearAlgebra", "Random"]
 git-tree-sha1 = "a72d22c7e13fe2de562feda8645aa134712a87ee"
 uuid = "1986cc42-f94f-5a68-af5c-568840ba703d"
 version = "1.17.0"
-weakdeps = ["ConstructionBase", "InverseFunctions"]
 
     [deps.Unitful.extensions]
     ConstructionBaseUnitfulExt = "ConstructionBase"
     InverseFunctionsUnitfulExt = "InverseFunctions"
+
+    [deps.Unitful.weakdeps]
+    ConstructionBase = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
+    InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
 
 [[deps.Variography]]
 deps = ["Bessels", "Distances", "GeoStatsBase", "GeoTables", "InteractiveUtils", "LinearAlgebra", "Meshes", "NearestNeighbors", "Optim", "Printf", "Random", "Setfield", "Tables", "Transducers", "Unitful"]
